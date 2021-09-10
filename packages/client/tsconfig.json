@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.settings.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "noEmit": true,
+    "lib": ["dom", "es2019", "es2017.object", "esnext.asynciterable"]
+
+    
+  },
+  "references": [{ "path": "../shared" }]
+}

@@ -1,0 +1,20 @@
+{
+    "private": true,
+    "name": "@app/server",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "license": "MIT",
+    "dependencies": {
+        "@koa/cors": "^3.1.0",
+        "dotenv": "^10.0.0",
+        "koa": "^2.13.1",
+        "koa-compress": "^5.1.0",
+        "koa-cors": "^0.0.16",
+        "koa-mount": "^4.0.0"
+    },
+    "devDependencies": {
+        "@types/koa-compress": "^4.0.3",
+        "@types/koa-cors": "^0.0.2"
+    }
+}

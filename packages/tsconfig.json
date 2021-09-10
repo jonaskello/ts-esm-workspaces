@@ -1,0 +1,9 @@
+{
+    // all packages
+    "files": [],
+    "references": [
+      { "path": "client" },
+      { "path": "server" },
+      { "path": "shared" },
+    ]
+  }
