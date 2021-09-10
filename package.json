@@ -27,6 +27,7 @@
     "typecheck": "tsc -b packages -w --preserveWatchOutput",
     "start": "run-p -l dev-client dev-server typecheck",
     "build": "tsc -b packages",
+    "rebuild": "run-s clean build",
     "clean": "tsc -b packages --clean && rm -rf packages/*/lib && rm -rf packages/*/test/lib && rm -rf packages/*/benchmark/lib && rm -rf packages/*/coverage",
     "dist": "snowpack build",
     "prod-client": "yarn dist && cd dist && http-server",
