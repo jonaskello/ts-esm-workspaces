@@ -40,6 +40,8 @@ The import chain looks something like this:
 
 `index.html -> packages/client/src/main.tsx -> ./app.tsx -> @app/shared -> node_modules/@app/shared/package.json -> main: "lib/index.js" -> packages/shared/lib/index.js -> more js files`
 
+The exact same problem seems to exist in `ts-node/esm`.
+
 The way we solve the above is to update `package.json`'s `main` field point to `src/index.ts` instead. Obviously this is not really a good idea becuase if we would publish the package it would not work. However for internal develpoment between packages using yarn workspaces and typescript project references it seems to work.
 
 It is possible to workaround the problem above for snowpack but not for node with ts-node/esm. For snowpack we can put a config for `packageOptions.packageLookupFields: ["tsMain", "main"]` and then add an extra filed in `shared/package.json` for `tsMain: src/index.ts`. However this trick does not work for ts-node/esm as it does not have this kind of config option.
