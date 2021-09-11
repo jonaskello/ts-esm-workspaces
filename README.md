@@ -1,4 +1,4 @@
-# esm-monorepo
+# ts-esm-monorepo
 
 Demo app for ES Modules monorepo using:
 
