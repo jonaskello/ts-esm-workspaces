@@ -1,4 +1,4 @@
-# ts-esm-monorepo
+# ts-esm-workspaces
 
 Demo app for ES Modules monorepo using:
 
