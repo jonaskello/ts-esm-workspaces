@@ -2,31 +2,31 @@
 
 Demo app for ES Modules monorepo using:
 
-* Snowpack
-* Yarn workspaces
-* Typescript project references
-* ts-node esm modules loading
+- Snowpack
+- Yarn workspaces
+- Typescript project references
+- ts-node esm modules loading
 
 There are three packages
 
-* client (this is the browser code in react)
-* server (this is the server-side code for nodejs)
-* shared (this code is used by both client and server packages)
+- client (this is the browser code in react)
+- server (this is the server-side code for nodejs)
+- shared (this code is used by both client and server packages)
 
 ## How to run
 
 ```bash
 yarn install
 yarn start
-``` 
+```
 
 ## How it works
 
 The commmand `yarn start` will start three scripts in parallel (using run-p from npm-run-all):
 
-* dev-client: runs snowpack and watches changes, use HMR to directly update browser
-* dev-server: runs nodemon to restart on server code changes (nodemon in turn runs node with ts-node/esm loader)
-* typecheck: runs tsc --watch to check types
+- dev-client: runs snowpack and watches changes, use HMR to directly update browser
+- dev-server: runs nodemon to restart on server code changes (nodemon in turn runs node with ts-node/esm loader)
+- typecheck: runs tsc --watch to check types
 
 It is important to note that `dev-client` and `dev-server` directly consumes `*.ts` files but it does not typecheck them. They will only transpile by stripping the typescript type-annotations, nothing more. So the browser and node will get type-stripped files and continue to work as long as the resulting javascript is valid, even if there are type erors. For example, node server, and the browser code will continue to run if you enter something like `const x: string = 11`. Typechecking is run as a separate process for all packages. This means that when developing you get high speed in changes in both client and server but typechecking might lag behind a bit.
 

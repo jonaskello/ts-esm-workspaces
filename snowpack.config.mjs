@@ -5,9 +5,7 @@ export default {
     // directory name: 'build directory'
     "packages/client/src": { url: "/" },
   },
-  plugins: [
-    "@snowpack/plugin-react-refresh",
-  ],
+  plugins: ["@snowpack/plugin-react-refresh"],
   routes: [
     /* Enable an SPA Fallback in development: */
     // {"match": "routes", "src": ".*", "dest": "/index.html"},
@@ -27,7 +25,6 @@ export default {
     /* ... */
     open: "none",
   },
-
   buildOptions: {
     sourcemap: "inline",
     clean: true, // Delete the build outputfolder
