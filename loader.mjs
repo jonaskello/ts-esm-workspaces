@@ -1,6 +1,7 @@
 import { URL, pathToFileURL, fileURLToPath } from "url";
 import { transformSync } from "esbuild";
 import fs from "fs";
+import { defaultGetFormat } from "./node-raw/api.js";
 
 const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
@@ -33,18 +34,32 @@ export function resolve(specifier, context, defaultResolve) {
   return defaultResolve(specifier, context, defaultResolve);
 }
 
-export function getFormat(url, context, defaultGetFormat) {
-  if (extensionsRegex.test(url)) {
-    return {
-      format: "module",
-    };
-  }
+export async function load(url, context, defaultLoad) {
+  // console.log("load: ", url, context);
+  const format =
+    context.format ?? getFormat(url, context) ?? defaultGetFormat(url, context);
 
-  // Let Node.js handle all other URLs.
-  return defaultGetFormat(url, context, defaultGetFormat);
+  // console.log("format: ", format, url);
+  // console.log("getFormat: ", getFormat(url, context, defaultGetFormat), url);
+  // console.log("defaultGetFormat: ", defaultGetFormat(url, context), url);
+
+  // Call defaultLoad() to get the source
+  const { source: rawSource } = await defaultLoad(url, { format }, defaultLoad);
+
+  // Call the old hook
+  const { source } = await transformSource(rawSource, { url, format });
+
+  return { format, source };
 }
 
-export function transformSource(source, context, defaultTransformSource) {
+export function getFormat(url, context, defaultGetFormat) {
+  if (extensionsRegex.test(url)) {
+    return "module";
+  }
+  return undefined;
+}
+
+export function transformSource(source, context) {
   const { url, format } = context;
 
   if (extensionsRegex.test(url)) {
@@ -75,6 +90,6 @@ export function transformSource(source, context, defaultTransformSource) {
     };
   }
 
-  // Let Node.js handle all other sources.
-  return defaultTransformSource(source, context, defaultTransformSource);
+  // Return untransformed source
+  return { source };
 }
