@@ -35,61 +35,56 @@ export function resolve(specifier, context, defaultResolve) {
 }
 
 export async function load(url, context, defaultLoad) {
-  // console.log("load: ", url, context);
-  const format =
+  // Determine format of the file
+  const initialFormat =
     context.format ?? getFormat(url, context) ?? defaultGetFormat(url, context);
 
-  // console.log("format: ", format, url);
-  // console.log("getFormat: ", getFormat(url, context, defaultGetFormat), url);
-  // console.log("defaultGetFormat: ", defaultGetFormat(url, context), url);
+  // Call defaultLoad to get the source
+  const { source: rawSource, format } = await defaultLoad(
+    url,
+    { format: initialFormat },
+    defaultLoad
+  );
 
-  // Call defaultLoad() to get the source
-  const { source: rawSource } = await defaultLoad(url, { format }, defaultLoad);
+  // Return transpiled source if typescript
+  if (extensionsRegex.test(url)) {
+    const source = transpileTypescript(url, format, rawSource);
+    return { format, source };
+  }
 
-  // Call the old hook
-  const { source } = await transformSource(rawSource, { url, format });
-
-  return { format, source };
+  // Return untransformed source
+  return { format, source: rawSource };
 }
 
-export function getFormat(url, context, defaultGetFormat) {
+function getFormat(url) {
   if (extensionsRegex.test(url)) {
     return "module";
   }
   return undefined;
 }
 
-export function transformSource(source, context) {
-  const { url, format } = context;
+function transpileTypescript(url, format, source) {
+  let filename = url;
+  if (!isWindows) filename = fileURLToPath(url);
 
-  if (extensionsRegex.test(url)) {
-    let filename = url;
-    if (!isWindows) filename = fileURLToPath(url);
+  const {
+    code: js,
+    warnings,
+    map: jsSourceMap,
+  } = transformSync(source.toString(), {
+    sourcefile: filename,
+    sourcemap: "both",
+    loader: "ts",
+    target: "esnext",
+    format: format === "module" ? "esm" : "cjs",
+  });
 
-    const {
-      code: js,
-      warnings,
-      map: jsSourceMap,
-    } = transformSync(source.toString(), {
-      sourcefile: filename,
-      sourcemap: "both",
-      loader: "ts",
-      target: "esnext",
-      format: format === "module" ? "esm" : "cjs",
-    });
-
-    if (warnings && warnings.length > 0) {
-      for (const warning of warnings) {
-        console.log(warning.location);
-        console.log(warning.text);
-      }
+  if (warnings && warnings.length > 0) {
+    for (const warning of warnings) {
+      console.log(warning.location);
+      console.log(warning.text);
     }
-
-    return {
-      source: js,
-    };
   }
 
-  // Return untransformed source
-  return { source };
+  return js;
 }
