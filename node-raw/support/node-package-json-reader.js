@@ -1,10 +1,10 @@
 // copied from https://github.com/nodejs/node/blob/v15.3.0/lib/internal/modules/package_json_reader.js
-'use strict';
+"use strict";
 
-const { SafeMap } = require('./node-primordials');
-const { internalModuleReadJSON } = require('./node-internal-fs');
-const { pathToFileURL } = require('url');
-const { toNamespacedPath } = require('path');
+const { SafeMap } = require("./node-primordials");
+const { internalModuleReadJSON } = require("./node-internal-fs");
+const { pathToFileURL } = require("url");
+const { toNamespacedPath } = require("path");
 
 const cache = new SafeMap();
 
@@ -23,7 +23,7 @@ function read(jsonPath) {
     toNamespacedPath(jsonPath)
   );
   const result = { string, containsKeys };
-  const { getOptionValue } = require('./node-options');
+  const { getOptionValue } = require("./node-options");
   if (string !== undefined) {
     if (manifest === undefined) {
       // manifest = getOptionValue('--experimental-policy') ?

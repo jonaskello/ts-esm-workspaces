@@ -5,19 +5,17 @@ import fs from "fs";
 const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
 
-const extensionsRegex = /\.ts$/;
-const excludeRegex = /^\w+:/;
-
 export function resolve(specifier, context, defaultResolve) {
   const { parentURL = baseURL } = context;
 
   // If file ends in .ts
-  if (extensionsRegex.test(specifier)) {
+  if (isTypescriptFile(specifier)) {
     const url = new URL(specifier, parentURL).href;
     return { url };
   }
 
   // ignore `data:` and `node:` prefix etc.
+  const excludeRegex = /^\w+:/;
   if (!excludeRegex.test(specifier)) {
     // Try to add `.ts` extension and resolve
     let url = new URL(specifier + ".ts", parentURL).href;
@@ -35,7 +33,7 @@ export function resolve(specifier, context, defaultResolve) {
 
 export async function load(url, context, defaultLoad) {
   // Return transpiled source if typescript file
-  if (extensionsRegex.test(url)) {
+  if (isTypescriptFile(url)) {
     // Call defaultLoad to get the source
     const format = getTypescriptModuleFormat();
     const { source: rawSource } = await defaultLoad(
@@ -49,6 +47,11 @@ export async function load(url, context, defaultLoad) {
 
   // Let Node.js load it
   return defaultLoad(url, context);
+}
+
+function isTypescriptFile(url) {
+  const extensionsRegex = /\.ts$/;
+  return extensionsRegex.test(url);
 }
 
 function transpileTypescript(url, source, outputFormat) {
