@@ -23,7 +23,7 @@ async function startServer(): Promise<void> {
   });
 
   const httpServer = app.listen(parseInt("4000", 10), process.env.ADDRESS);
-  console.log(appendMessage("asd"));
+  console.log(appendMessage("bbbb"));
   console.log(`Service listening on port ${4000}`); //tslint:disable-line
   // Stop server on CTRL+C
   process.on("SIGINT", () => {
