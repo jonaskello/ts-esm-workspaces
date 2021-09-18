@@ -1,7 +1,4 @@
 import Koa from "koa";
-// import * as mount from "koa-mount";
-import compress from "koa-compress";
-import cors from "koa-cors";
 import { appendMessage } from "@app/shared";
 
 // if (process.env.NODE_ENV !== "production") {
@@ -13,10 +10,6 @@ const x = 11;
 
 async function startServer(): Promise<void> {
   let app = new Koa();
-  // TODO .env get port from there
-
-  // app.use(cors());
-  app.use(compress());
   app.use(async function (ctx: Koa.Context): Promise<void> {
     ctx.body = { aa: appendMessage("cc") };
     ctx.set("content-type", "application/json");
