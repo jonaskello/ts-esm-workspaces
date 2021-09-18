@@ -57,10 +57,7 @@ export async function load(url, context, defaultLoad) {
 }
 
 function getFormat(url) {
-  if (extensionsRegex.test(url)) {
-    return "module";
-  }
-  return undefined;
+  return extensionsRegex.test(url) ? "module" : undefined;
 }
 
 function transpileTypescript(url, format, source) {
