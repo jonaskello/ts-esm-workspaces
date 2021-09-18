@@ -10,9 +10,9 @@ const extensionsRegex = /\.ts$/;
 const excludeRegex = /^\w+:/;
 
 export function resolve(specifier, context, defaultResolve) {
-  console.log("hejehej resolve!", specifier);
   const { parentURL = baseURL } = context;
 
+  // If file ends in .ts
   if (extensionsRegex.test(specifier)) {
     const url = new URL(specifier, parentURL).href;
     return { url };
@@ -20,7 +20,7 @@ export function resolve(specifier, context, defaultResolve) {
 
   // ignore `data:` and `node:` prefix etc.
   if (!excludeRegex.test(specifier)) {
-    // Try to resolve `.ts` extension
+    // Try to add `.ts` extension and resolve
     let url = new URL(specifier + ".ts", parentURL).href;
     const path = fileURLToPath(url);
     if (fs.existsSync(path)) {
@@ -35,32 +35,23 @@ export function resolve(specifier, context, defaultResolve) {
 }
 
 export async function load(url, context, defaultLoad) {
-  // Determine format of the file
-  const initialFormat =
-    context.format ?? getFormat(url, context) ?? defaultGetFormat(url, context);
-
-  // Call defaultLoad to get the source
-  const { source: rawSource, format } = await defaultLoad(
-    url,
-    { format: initialFormat },
-    defaultLoad
-  );
-
-  // Return transpiled source if typescript
+  // Return transpiled source if typescript file
   if (extensionsRegex.test(url)) {
-    const source = transpileTypescript(url, format, rawSource);
-    return { format, source };
+    // Call defaultLoad to get the source (the format of typescript files is always module)
+    const { source: rawSource } = await defaultLoad(
+      url,
+      { format: "module" },
+      defaultLoad
+    );
+    const source = transpileTypescript(url, rawSource);
+    return { format: "module", source };
   }
 
   // Return untransformed source
-  return { format, source: rawSource };
+  return defaultLoad(url, context);
 }
 
-function getFormat(url) {
-  return extensionsRegex.test(url) ? "module" : undefined;
-}
-
-function transpileTypescript(url, format, source) {
+function transpileTypescript(url, source) {
   let filename = url;
   if (!isWindows) filename = fileURLToPath(url);
 
@@ -73,7 +64,9 @@ function transpileTypescript(url, format, source) {
     sourcemap: "both",
     loader: "ts",
     target: "esnext",
-    format: format === "module" ? "esm" : "cjs",
+    // This sets the output format for the generated JavaScript files
+    // format: format === "module" ? "esm" : "cjs",
+    format: "esm",
   });
 
   if (warnings && warnings.length > 0) {
