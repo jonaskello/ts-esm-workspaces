@@ -1,7 +1,6 @@
 import { URL, pathToFileURL, fileURLToPath } from "url";
 import { transformSync } from "esbuild";
 import fs from "fs";
-import { defaultGetFormat } from "./node-raw/api.js";
 
 const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
@@ -47,7 +46,7 @@ export async function load(url, context, defaultLoad) {
     return { format: "module", source };
   }
 
-  // Return untransformed source
+  // Let Node.js load it
   return defaultLoad(url, context);
 }
 
