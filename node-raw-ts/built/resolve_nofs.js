@@ -632,19 +632,16 @@ function resolveAsCommonJS(specifier, parentURL) {
     }
 }
 module.exports = {
-    DEFAULT_CONDITIONS,
-    encodedSepRegEx,
-    getPackageScopeConfig,
-    getPackageType,
-    packageExportsResolve,
-    packageImportsResolve,
     emitLegacyIndexDeprecation,
     getConditionsSet,
     getPackageConfig,
-    resolvePackageTargetString,
+    getPackageScopeConfig,
     shouldBeTreatedAsRelativeOrAbsolutePath,
     resolveAsCommonJS,
+    packageImportsResolve,
+    packageExportsResolve,
     parsePackageName,
+    getPackageType,
 };
 // cycle
 const { defaultGetFormat } = require("../support/get_format");
