@@ -18,9 +18,6 @@ const {
   ERR_MODULE_NOT_FOUND,
 } = require("./resolve_fs");
 
-const baseURL = pathToFileURL(`${process.cwd()}/`).href;
-const isWindows = process.platform === "win32";
-
 export function resolve(specifier, context) {
   console.log("RESOLVE: START");
 

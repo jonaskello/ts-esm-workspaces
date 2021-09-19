@@ -9,8 +9,6 @@ const fs_1 = __importDefault(require("fs"));
 const { statSync, Stats } = require("fs");
 const { emitLegacyIndexDeprecation, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
 const { defaultResolveApi, finalizeResolution, ERR_MODULE_NOT_FOUND, } = require("./resolve_fs");
-const baseURL = (0, url_1.pathToFileURL)(`${process.cwd()}/`).href;
-const isWindows = process.platform === "win32";
 function resolve(specifier, context) {
     console.log("RESOLVE: START");
     // Use default but with our own moduleResolve
