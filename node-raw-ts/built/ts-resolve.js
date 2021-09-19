@@ -9,28 +9,6 @@ const fs_1 = __importDefault(require("fs"));
 const { statSync, Stats } = require("fs");
 const { emitLegacyIndexDeprecation, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, packageImportsResolve, packageExportsResolve, parsePackageName, getConditionsSet, } = require("./resolve_nofs");
 const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
-// const extensionsRegex = /\.ts$/;
-// const excludeRegex = /^\w+:/;
-// export function resolve(specifier, context, defaultResolve) {
-//   const { parentURL = baseURL } = context;
-//   // If file ends in .ts
-//   if (extensionsRegex.test(specifier)) {
-//     const url = new URL(specifier, parentURL).href;
-//     return { url };
-//   }
-//   // ignore `data:` and `node:` prefix etc.
-//   if (!excludeRegex.test(specifier)) {
-//     // Try to add `.ts` extension and resolve
-//     let url = new URL(specifier + ".ts", parentURL).href;
-//     const path = fileURLToPath(url);
-//     if (fs.existsSync(path)) {
-//       return { url };
-//     }
-//   }
-//   console.log("forwarding", specifier);
-//   // Let Node.js handle all other specifiers.
-//   return defaultResolve(specifier, context, defaultResolve);
-// }
 function resolve(specifier, context, defaultResolve) {
     console.log("RESOLVE: START");
     // Let node handle `data:` and `node:` prefix etc.
@@ -38,16 +16,16 @@ function resolve(specifier, context, defaultResolve) {
     if (excludeRegex.test(specifier)) {
         return defaultResolve(specifier, context, defaultResolve);
     }
+    // If file ends in .ts then just return it
+    // This can only happen for the entry file as typescript does not allow
+    // import of .ts files
     let { parentURL, conditions } = context;
+    if (isTypescriptFile(specifier)) {
+        const url = new url_1.URL(specifier, parentURL).href;
+        return { url };
+    }
     conditions = getConditionsSet(conditions);
-    let url;
-    try {
-        url = myModuleResolve(specifier, parentURL, conditions);
-    }
-    catch (error) {
-        throw error;
-    }
-    console.log("RESOLVE: END", `${url}`);
+    const url = myModuleResolve(specifier, parentURL, conditions);
     return { url: `${url}` };
 }
 exports.resolve = resolve;
@@ -78,7 +56,8 @@ function myModuleResolve(specifier, base, conditions) {
         }
         catch {
             console.log("myModuleResolve: packageResolve");
-            resolved = packageResolve(specifier, base, conditions);
+            resolved = packageResolve(specifier, base, conditions)[0];
+            console.log("myModuleResolve: packageResolve RETURN", resolved);
         }
     }
     console.log("myModuleResolve: END", resolved.href);
@@ -88,12 +67,11 @@ function myModuleResolve(specifier, base, conditions) {
     // the resolved file is in the output space of the tsconfig used.
     // If it is we need to map it back to the typescript file that will compile to the resolved file
     // and resolve to that file instead
-    // If file ends in .ts use it as-is
-    if (!isTypescriptFile(resolved.href)) {
-        // Do we want to support extensionless files? In that case we need to check if it is
-        // a directory or file... Typescript always outputs .js files so we could just add that?
-        resolved = translateJsUrlBackToTypescriptUrl(resolved);
-    }
+    // Cannot be a .ts file at this point since that case only exists for the entry file
+    // and is handled directly in resolve()
+    // Do we want to support extensionless files? In that case we need to check if it is
+    // a directory or file... Typescript always outputs .js files so we could just add that?
+    resolved = translateJsUrlBackToTypescriptUrl(resolved);
     // finalizeResolution checks for old file endings....
     return finalizeResolution(resolved, base);
 }
@@ -127,7 +105,7 @@ function packageResolve(specifier, base, conditions) {
     // Check if the specifier resolves to the same package we are resolving from
     const selfResolved = resolveSelf(base, packageName, packageSubpath, conditions);
     if (selfResolved)
-        return selfResolved;
+        return [selfResolved];
     // Find package.json by ascending the file system
     const packageJsonMatch = findPackageJson(packageName, base, isScoped);
     // If package.json was found, resolve from it's exports or main field
@@ -135,10 +113,12 @@ function packageResolve(specifier, base, conditions) {
         const [packageJSONUrl, packageJSONPath] = packageJsonMatch;
         const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
         if (packageConfig.exports !== undefined && packageConfig.exports !== null)
-            return packageExportsResolve(packageResolve, packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
+            return [
+                packageExportsResolve(packageResolve, packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved,
+            ];
         if (packageSubpath === ".")
-            return legacyMainResolve(packageJSONUrl, packageConfig, base);
-        return new url_1.URL(packageSubpath, packageJSONUrl);
+            return [legacyMainResolve(packageJSONUrl, packageConfig, base)];
+        return [new url_1.URL(packageSubpath, packageJSONUrl)];
     }
     // eslint can't handle the above code.
     // eslint-disable-next-line no-unreachable
