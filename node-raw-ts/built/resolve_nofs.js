@@ -710,15 +710,12 @@ module.exports = {
     emitLegacyIndexDeprecation,
     getConditionsSet,
     getPackageConfig,
-    throwImportNotDefined,
-    throwExportsNotFound,
     throwInvalidSubpath,
     throwInvalidPackageTarget,
     resolvePackageTargetString,
-    isArrayIndex,
-    isRelativeSpecifier,
     shouldBeTreatedAsRelativeOrAbsolutePath,
     resolveAsCommonJS,
+    parsePackageName,
 };
 // cycle
 const { defaultGetFormat } = require("../support/get_format");
