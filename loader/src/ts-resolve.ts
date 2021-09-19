@@ -1,5 +1,10 @@
 import { URL, pathToFileURL, fileURLToPath } from "url";
 import fs from "fs";
+import {
+  loadTsconfig,
+  resolveConfigPath,
+  tsConfigLoader,
+} from "./tsconfig-loader";
 const { statSync, Stats } = require("fs");
 
 const {
@@ -18,6 +23,25 @@ const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
 export function resolve(specifier, context, defaultResolve) {
   console.log("RESOLVE: START");
 
+  let { parentURL, conditions } = context;
+
+  // Get tsconfig only if main entrypoint
+  if (parentURL === undefined) {
+    // const tsConfig = tsConfigLoader({
+    //   getEnv: (key: string) => process.env[key],
+    //   cwd: process.cwd(),
+    // });
+    const cwd = process.cwd();
+    const TS_NODE_PROJECT = process.env["TS_NODE_PROJECT"];
+    const configPath = resolveConfigPath(cwd, TS_NODE_PROJECT);
+    if (!configPath) {
+      throw new Error("Could not resolve path to tsconfig.");
+    }
+    const tsconfig = loadTsconfig(configPath);
+
+    console.log("tsConfig", tsconfig);
+  }
+
   // Let node handle `data:` and `node:` prefix etc.
   const excludeRegex = /^\w+:/;
   if (excludeRegex.test(specifier)) {
@@ -27,7 +51,6 @@ export function resolve(specifier, context, defaultResolve) {
   // If file ends in .ts then just return it
   // This can only happen for the entry file as typescript does not allow
   // import of .ts files
-  let { parentURL, conditions } = context;
   if (isTypescriptFile(specifier)) {
     const url = new URL(specifier, parentURL).href;
     return { url };
