@@ -1,7 +1,7 @@
 {
   "watch": ["packages/server/src", "packages/shared/src"],
   "ext": "ts,tsx,json",
-  "exec": "node --loader ./node-raw-ts/built/myloader.js --experimental-specifier-resolution=node --enable-source-maps ./packages/server/src/server.ts",
+  "exec": "node --loader ./loader/lib/myloader.js --experimental-specifier-resolution=node --enable-source-maps ./packages/server/src/server.ts",
   "env": {
     "TS_NODE_PROJECT": "./packages/server/tsconfig.json",
     "TS_NODE_TRANSPILE_ONLY": "true",

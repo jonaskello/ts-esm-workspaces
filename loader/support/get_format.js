@@ -13,7 +13,7 @@ const experimentalSpecifierResolution = getOptionValue(
   "--experimental-specifier-resolution"
 );
 const experimentalWasmModules = getOptionValue("--experimental-wasm-modules");
-const { getPackageType } = require("../built/resolve_fs");
+const { getPackageType } = require("../lib/resolve_fs");
 const { URL, fileURLToPath } = require("url");
 const { ERR_UNKNOWN_FILE_EXTENSION } = require("../support/node-errors").codes;
 

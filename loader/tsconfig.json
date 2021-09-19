@@ -1,7 +1,7 @@
 {
-  "include": ["./*.ts"],
   "compilerOptions": {
-    "outDir": "./built",
+    "rootDir": "./src",
+    "outDir": "./lib",
     "noErrorTruncation": true,
 
     "lib": ["es2015", "es2017.object", "esnext.asynciterable"],
