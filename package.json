@@ -35,9 +35,7 @@
     "prod-server": "yarn build && node --experimental-specifier-resolution=node packages/server/lib/server.js",
     "build-prod": "node scripts/build-prod.js",
     "serve-prod": "node --experimental-specifier-resolution=node prod/packages/server/lib/server.js",
-    "build-raw": "tsc -p node-raw-ts",
-    "try": "yarn build-raw && yarn dev-server",
     "build-loader": "tsc -p loader",
-    "try2": "yarn build-loader && yarn dev-server"
+    "try": "yarn build-loader && yarn dev-server"
   }
 }
