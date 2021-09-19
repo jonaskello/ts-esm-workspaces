@@ -718,6 +718,7 @@ module.exports = {
     isArrayIndex,
     isRelativeSpecifier,
     shouldBeTreatedAsRelativeOrAbsolutePath,
+    resolveAsCommonJS,
 };
 // cycle
 const { defaultGetFormat } = require("../support/get_format");

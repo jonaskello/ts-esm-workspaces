@@ -999,6 +999,7 @@ module.exports = {
   isArrayIndex,
   isRelativeSpecifier,
   shouldBeTreatedAsRelativeOrAbsolutePath,
+  resolveAsCommonJS,
 };
 
 // cycle

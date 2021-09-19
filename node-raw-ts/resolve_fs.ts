@@ -12,6 +12,7 @@ const {
   isArrayIndex,
   isRelativeSpecifier,
   shouldBeTreatedAsRelativeOrAbsolutePath,
+  resolveAsCommonJS,
 } = require("./resolve_nofs");
 
 // "use strict";
@@ -861,55 +862,6 @@ function moduleResolve(specifier, base, conditions) {
     }
   }
   return finalizeResolution(resolved, base);
-}
-
-/**
- * Try to resolve an import as a CommonJS module
- * @param {string} specifier
- * @param {string} parentURL
- * @returns {boolean|string}
- */
-function resolveAsCommonJS(specifier, parentURL) {
-  try {
-    const parent = fileURLToPath(parentURL);
-    const tmpModule = new CJSModule(parent, null);
-    tmpModule.paths = CJSModule._nodeModulePaths(parent);
-
-    let found = CJSModule._resolveFilename(specifier, tmpModule, false);
-
-    // If it is a relative specifier return the relative path
-    // to the parent
-    if (isRelativeSpecifier(specifier)) {
-      found = relative(parent, found);
-      // Add '.separator if the path does not start with '..separator'
-      // This should be a safe assumption because when loading
-      // esm modules there should be always a file specified so
-      // there should not be a specifier like '..' or '.'
-      if (!StringPrototypeStartsWith(found, `..${sep}`)) {
-        found = `.${sep}${found}`;
-      }
-    } else if (isBareSpecifier(specifier)) {
-      // If it is a bare specifier return the relative path within the
-      // module
-      const pkg = StringPrototypeSplit(specifier, "/")[0];
-      const index = StringPrototypeIndexOf(found, pkg);
-      if (index !== -1) {
-        found = StringPrototypeSlice(found, index);
-      }
-    }
-    // Normalize the path separator to give a valid suggestion
-    // on Windows
-    if (process.platform === "win32") {
-      found = RegExpPrototypeSymbolReplace(
-        new RegExp(`\\${sep}`, "g"),
-        found,
-        "/"
-      );
-    }
-    return found;
-  } catch {
-    return false;
-  }
 }
 
 function defaultResolve(specifier, context: any = {}, defaultResolveUnused) {
