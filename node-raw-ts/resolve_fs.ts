@@ -9,6 +9,7 @@ const {
   throwExportsNotFound,
   throwInvalidSubpath,
   throwInvalidPackageTarget,
+  isArrayIndex,
 } = require("./resolve_nofs");
 
 // "use strict";
@@ -344,16 +345,6 @@ function resolvePackageTargetString(
       RegExpPrototypeSymbolReplace(patternRegEx, resolved.href, () => subpath)
     );
   return new URL(subpath, resolved);
-}
-
-/**
- * @param {string} key
- * @returns {boolean}
- */
-function isArrayIndex(key) {
-  const keyNum = +key;
-  if (`${keyNum}` !== key) return false;
-  return keyNum >= 0 && keyNum < 0xffff_ffff;
 }
 
 function resolvePackageTarget(

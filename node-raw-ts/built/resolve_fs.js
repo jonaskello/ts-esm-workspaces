@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.foo = void 0;
-const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, } = require("./resolve_nofs");
+const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, isArrayIndex, } = require("./resolve_nofs");
 // "use strict";
 exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
@@ -236,16 +236,6 @@ function resolvePackageTargetString(target, subpath, match, packageJSONUrl, base
     if (pattern)
         return new URL(RegExpPrototypeSymbolReplace(patternRegEx, resolved.href, () => subpath));
     return new URL(subpath, resolved);
-}
-/**
- * @param {string} key
- * @returns {boolean}
- */
-function isArrayIndex(key) {
-    const keyNum = +key;
-    if (`${keyNum}` !== key)
-        return false;
-    return keyNum >= 0 && keyNum < 0xffff_ffff;
 }
 function resolvePackageTarget(packageJSONUrl, target, subpath, packageSubpath, base, pattern, internal, conditions) {
     if (typeof target === "string") {
