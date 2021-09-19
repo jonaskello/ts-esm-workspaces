@@ -69,7 +69,7 @@ function myModuleResolve(specifier, base, conditions) {
       resolved = new URL(specifier);
     } catch {
       console.log("myModuleResolve: packageResolve");
-      resolved = packageResolve(specifier, base, conditions)[0];
+      resolved = packageResolve(specifier, base, conditions);
       console.log("myModuleResolve: packageResolve RETURN", resolved);
     }
   }
@@ -131,7 +131,7 @@ function packageResolve(specifier, base, conditions) {
     packageSubpath,
     conditions
   );
-  if (selfResolved) return [selfResolved];
+  if (selfResolved) return selfResolved;
 
   // Find package.json by ascending the file system
   const packageJsonMatch = findPackageJson(packageName, base, isScoped);
@@ -141,19 +141,17 @@ function packageResolve(specifier, base, conditions) {
     const [packageJSONUrl, packageJSONPath] = packageJsonMatch;
     const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
     if (packageConfig.exports !== undefined && packageConfig.exports !== null)
-      return [
-        packageExportsResolve(
-          packageResolve,
-          packageJSONUrl,
-          packageSubpath,
-          packageConfig,
-          base,
-          conditions
-        ).resolved,
-      ];
+      return packageExportsResolve(
+        packageResolve,
+        packageJSONUrl,
+        packageSubpath,
+        packageConfig,
+        base,
+        conditions
+      ).resolved;
     if (packageSubpath === ".")
-      return [legacyMainResolve(packageJSONUrl, packageConfig, base)];
-    return [new URL(packageSubpath, packageJSONUrl)];
+      return legacyMainResolve(packageJSONUrl, packageConfig, base);
+    return new URL(packageSubpath, packageJSONUrl);
   }
 
   // eslint can't handle the above code.
