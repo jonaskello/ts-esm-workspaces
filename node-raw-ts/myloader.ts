@@ -178,14 +178,20 @@ function packageResolve(specifier, base, conditions) {
   );
 
   // ResolveSelf
-  const packageConfig = getPackageScopeConfig(base);
-  if (packageConfig.exists) {
-    const packageJSONUrl = pathToFileURL(packageConfig.pjsonPath);
-    if (
-      packageConfig.name === packageName &&
-      packageConfig.exports !== undefined &&
-      packageConfig.exports !== null
-    ) {
+  const selfResolved = resolveSelf(
+    base,
+    packageName,
+    packageSubpath,
+    conditions
+  );
+  if (selfResolved) return selfResolved;
+
+  const packageJsonMatch = findPackageJson(packageName, base, isScoped);
+
+  if (packageJsonMatch) {
+    const [packageJSONUrl, packageJSONPath] = packageJsonMatch;
+    const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
+    if (packageConfig.exports !== undefined && packageConfig.exports !== null)
       return packageExportsResolve(
         packageResolve,
         packageJSONUrl,
@@ -194,9 +200,18 @@ function packageResolve(specifier, base, conditions) {
         base,
         conditions
       ).resolved;
-    }
+    if (packageSubpath === ".")
+      return legacyMainResolve(packageJSONUrl, packageConfig, base);
+    return new URL(packageSubpath, packageJSONUrl);
   }
 
+  // eslint can't handle the above code.
+  // eslint-disable-next-line no-unreachable
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base));
+}
+
+// This could probably be moved to a built-in API
+function findPackageJson(packageName, base, isScoped) {
   let packageJSONUrl = new URL(
     "./node_modules/" + packageName + "/package.json",
     base
@@ -221,8 +236,22 @@ function packageResolve(specifier, base, conditions) {
     }
 
     // Package match.
-    const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
-    if (packageConfig.exports !== undefined && packageConfig.exports !== null)
+    return [packageJSONUrl, packageJSONPath];
+    // Cross-platform root check.
+  } while (packageJSONPath.length !== lastPath.length);
+  return undefined;
+}
+
+// This could probably be moved to a built-in API
+function resolveSelf(base, packageName, packageSubpath, conditions) {
+  const packageConfig = getPackageScopeConfig(base);
+  if (packageConfig.exists) {
+    const packageJSONUrl = pathToFileURL(packageConfig.pjsonPath);
+    if (
+      packageConfig.name === packageName &&
+      packageConfig.exports !== undefined &&
+      packageConfig.exports !== null
+    ) {
       return packageExportsResolve(
         packageResolve,
         packageJSONUrl,
@@ -231,15 +260,9 @@ function packageResolve(specifier, base, conditions) {
         base,
         conditions
       ).resolved;
-    if (packageSubpath === ".")
-      return legacyMainResolve(packageJSONUrl, packageConfig, base);
-    return new URL(packageSubpath, packageJSONUrl);
-    // Cross-platform root check.
-  } while (packageJSONPath.length !== lastPath.length);
-
-  // eslint can't handle the above code.
-  // eslint-disable-next-line no-unreachable
-  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base));
+    }
+  }
+  return undefined;
 }
 
 /**
