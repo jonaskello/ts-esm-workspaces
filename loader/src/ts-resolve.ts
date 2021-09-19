@@ -65,7 +65,6 @@ function loadTsConfigAndResolveReferences(): Map<string, Tsconfig> {
     [{ path: entryTsConfig }],
     tsconfigMap
   );
-
   return tsconfigMap;
 }
 
