@@ -47,6 +47,7 @@ function resolve(specifier, context, defaultResolve) {
     catch (error) {
         throw error;
     }
+    console.log("RESOLVE: END", `${url}`);
     return { url: `${url}` };
 }
 exports.resolve = resolve;
