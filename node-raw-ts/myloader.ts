@@ -154,7 +154,11 @@ function myModuleResolve(specifier, base, conditions) {
   // the resolved file is in the output space of the tsconfig used.
   // If it is we need to map it back to the typescript file that will compile to the resolved file
   // and resolve to that file instead
-  resolved = translateJsUrlBackToTypescriptUrl(resolved);
+
+  // If file ends in .ts use it as-is
+  if (!isTypescriptFile(resolved.href)) {
+    resolved = translateJsUrlBackToTypescriptUrl(resolved);
+  }
 
   // finalizeResolution checks for old file endings....
   return finalizeResolution(resolved, base);
@@ -167,11 +171,6 @@ function myModuleResolve(specifier, base, conditions) {
  * @returns url
  */
 function translateJsUrlBackToTypescriptUrl(url) {
-  // If file ends in .ts use it as-is
-  if (isTypescriptFile(url.href)) {
-    return url;
-  }
-
   // Try to add `.ts` extension and resolve
   const path = fileURLToPath(url) + ".ts";
   console.log("translateJsUrlBackToTypescriptUrl pathpathpath", path);
