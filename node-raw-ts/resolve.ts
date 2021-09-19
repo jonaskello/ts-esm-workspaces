@@ -355,10 +355,10 @@ function legacyMainResolve(packageJSONUrl, packageConfig, base) {
     }
     // Fallthrough.
   }
-  if (fileExists((guess = new URL("./index.js", packageJSONUrl))));
-  else if (fileExists((guess = new URL("./index.json", packageJSONUrl))));
-  else if (fileExists((guess = new URL("./index.node", packageJSONUrl))));
-  else guess = undefined;
+  if (fileExists((guess = new URL("./index.js", packageJSONUrl)))) {
+  } else if (fileExists((guess = new URL("./index.json", packageJSONUrl)))) {
+  } else if (fileExists((guess = new URL("./index.node", packageJSONUrl)))) {
+  } else guess = undefined;
   if (guess) {
     emitLegacyIndexDeprecation(guess, packageJSONUrl, base, packageConfig.main);
     return guess;
