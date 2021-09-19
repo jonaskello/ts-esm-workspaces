@@ -1,5 +1,8 @@
+"use strict";
 // "use strict";
-export const foo = 42;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.foo = void 0;
+exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
 // RegExp,
 RegExpPrototypeSymbolReplace, RegExpPrototypeTest, SafeMap, SafeSet, 

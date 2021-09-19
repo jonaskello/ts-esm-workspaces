@@ -1,5 +1,7 @@
 // "use strict";
 
+export const foo = 42;
+
 const {
   ArrayIsArray,
   ArrayPrototypeJoin,
