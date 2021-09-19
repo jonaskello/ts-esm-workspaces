@@ -992,8 +992,6 @@ module.exports = {
   emitLegacyIndexDeprecation,
   getConditionsSet,
   getPackageConfig,
-  throwInvalidSubpath,
-  throwInvalidPackageTarget,
   resolvePackageTargetString,
   shouldBeTreatedAsRelativeOrAbsolutePath,
   resolveAsCommonJS,

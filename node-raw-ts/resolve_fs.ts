@@ -3,8 +3,6 @@ const {
   getConditionsSet,
   getPackageConfig,
   getPackageScopeConfig,
-  throwInvalidSubpath,
-  throwInvalidPackageTarget,
   shouldBeTreatedAsRelativeOrAbsolutePath,
   resolveAsCommonJS,
   packageImportsResolve,

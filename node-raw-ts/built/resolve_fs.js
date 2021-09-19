@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.foo = void 0;
-const { emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwInvalidSubpath, throwInvalidPackageTarget, shouldBeTreatedAsRelativeOrAbsolutePath, resolveAsCommonJS, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
+const { emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, resolveAsCommonJS, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
 // "use strict";
 exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
