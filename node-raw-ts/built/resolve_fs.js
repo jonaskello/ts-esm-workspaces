@@ -197,43 +197,6 @@ function finalizeResolution(resolved, base) {
 }
 const invalidSegmentRegEx = /(^|\\|\/)(\.\.?|node_modules)(\\|\/|$)/;
 const patternRegEx = /\*/g;
-function resolvePackageTargetString(target, subpath, match, packageJSONUrl, base, pattern, internal, conditions) {
-    if (subpath !== "" && !pattern && target[target.length - 1] !== "/")
-        throwInvalidPackageTarget(match, target, packageJSONUrl, internal, base);
-    if (!StringPrototypeStartsWith(target, "./")) {
-        if (internal &&
-            !StringPrototypeStartsWith(target, "../") &&
-            !StringPrototypeStartsWith(target, "/")) {
-            let isURL = false;
-            try {
-                new URL(target);
-                isURL = true;
-            }
-            catch { }
-            if (!isURL) {
-                const exportTarget = pattern
-                    ? RegExpPrototypeSymbolReplace(patternRegEx, target, () => subpath)
-                    : target + subpath;
-                return packageResolve(exportTarget, packageJSONUrl, conditions);
-            }
-        }
-        throwInvalidPackageTarget(match, target, packageJSONUrl, internal, base);
-    }
-    if (RegExpPrototypeTest(invalidSegmentRegEx, StringPrototypeSlice(target, 2)))
-        throwInvalidPackageTarget(match, target, packageJSONUrl, internal, base);
-    const resolved = new URL(target, packageJSONUrl);
-    const resolvedPath = resolved.pathname;
-    const packagePath = new URL(".", packageJSONUrl).pathname;
-    if (!StringPrototypeStartsWith(resolvedPath, packagePath))
-        throwInvalidPackageTarget(match, target, packageJSONUrl, internal, base);
-    if (subpath === "")
-        return resolved;
-    if (RegExpPrototypeTest(invalidSegmentRegEx, subpath))
-        throwInvalidSubpath(match + subpath, packageJSONUrl, internal, base);
-    if (pattern)
-        return new URL(RegExpPrototypeSymbolReplace(patternRegEx, resolved.href, () => subpath));
-    return new URL(subpath, resolved);
-}
 /**
  * @param {URL} url
  * @returns {PackageType}
