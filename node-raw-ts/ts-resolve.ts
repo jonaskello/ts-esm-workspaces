@@ -82,13 +82,12 @@ function myModuleResolve(specifier, base, conditions) {
   // If it is we need to map it back to the typescript file that will compile to the resolved file
   // and resolve to that file instead
 
-  // Cannot be a .ts file at this point since that case only exists for the entry file
-  // and is handled directly in resolve()
+  // Cannot be a .ts file since that case only exists for the entry file and is handled directly in resolve()
   // Do we want to support extensionless files? In that case we need to check if it is
   // a directory or file... Typescript always outputs .js files so we could just add that?
   resolved = translateJsUrlBackToTypescriptUrl(resolved);
 
-  // finalizeResolution checks for old file endings....
+  // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
   return finalizeResolution(resolved, base);
 }
 
