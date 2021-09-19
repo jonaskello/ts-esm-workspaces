@@ -997,6 +997,8 @@ module.exports = {
   throwInvalidPackageTarget,
   resolvePackageTargetString,
   isArrayIndex,
+  isRelativeSpecifier,
+  shouldBeTreatedAsRelativeOrAbsolutePath,
 };
 
 // cycle

@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.foo = void 0;
-const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, isArrayIndex, } = require("./resolve_nofs");
+const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, isArrayIndex, isRelativeSpecifier, shouldBeTreatedAsRelativeOrAbsolutePath, } = require("./resolve_nofs");
 // "use strict";
 exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
@@ -561,24 +561,6 @@ function packageResolve(specifier, base, conditions) {
  */
 function isBareSpecifier(specifier) {
     return specifier[0] && specifier[0] !== "/" && specifier[0] !== ".";
-}
-function isRelativeSpecifier(specifier) {
-    if (specifier[0] === ".") {
-        if (specifier.length === 1 || specifier[1] === "/")
-            return true;
-        if (specifier[1] === ".") {
-            if (specifier.length === 2 || specifier[2] === "/")
-                return true;
-        }
-    }
-    return false;
-}
-function shouldBeTreatedAsRelativeOrAbsolutePath(specifier) {
-    if (specifier === "")
-        return false;
-    if (specifier[0] === "/")
-        return true;
-    return isRelativeSpecifier(specifier);
 }
 /**
  * @param {string} specifier

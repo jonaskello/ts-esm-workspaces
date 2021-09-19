@@ -716,6 +716,8 @@ module.exports = {
     throwInvalidPackageTarget,
     resolvePackageTargetString,
     isArrayIndex,
+    isRelativeSpecifier,
+    shouldBeTreatedAsRelativeOrAbsolutePath,
 };
 // cycle
 const { defaultGetFormat } = require("../support/get_format");
