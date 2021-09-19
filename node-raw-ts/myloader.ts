@@ -25,27 +25,27 @@ const isWindows = process.platform === "win32";
 export function resolve(specifier, context) {
   console.log("RESOLVE: START");
 
-  const { parentURL = baseURL } = context;
+  // const { parentURL = baseURL } = context;
 
-  // If file ends in .ts
-  if (isTypescriptFile(specifier)) {
-    const url = new URL(specifier, parentURL).href;
-    return { url };
-  }
+  // // If file ends in .ts
+  // if (isTypescriptFile(specifier)) {
+  //   const url = new URL(specifier, parentURL).href;
+  //   return { url };
+  // }
 
-  // ignore `data:` and `node:` prefix etc.
-  const excludeRegex = /^\w+:/;
-  if (!excludeRegex.test(specifier)) {
-    // Try to add `.ts` extension and resolve
-    let url = new URL(specifier + ".ts", parentURL).href;
-    const path = fileURLToPath(url);
-    if (fs.existsSync(path)) {
-      console.log("RESOLVE: RETURN");
-      return { url };
-    }
-  }
+  // // ignore `data:` and `node:` prefix etc.
+  // const excludeRegex = /^\w+:/;
+  // if (!excludeRegex.test(specifier)) {
+  //   // Try to add `.ts` extension and resolve
+  //   let url = new URL(specifier + ".ts", parentURL).href;
+  //   const path = fileURLToPath(url);
+  //   if (fs.existsSync(path)) {
+  //     console.log("RESOLVE: RETURN");
+  //     return { url };
+  //   }
+  // }
 
-  console.log("RESOLVE: FORWARD", specifier);
+  // console.log("RESOLVE: FORWARD", specifier);
 
   // Let Node.js handle all other specifiers.
   return defaultResolveApi(specifier, context, myModuleResolve);
@@ -143,11 +143,13 @@ So instead of just chaning the extension from .js to .ts, or just adding .ts to 
  */
 function myModuleResolve(specifier, base, conditions) {
   console.log("myModuleResolvemyModuleResolvemyModuleResolvemyModuleResolve");
+
   // Order swapped from spec for minor perf gain.
   // Ok since relative URLs cannot parse as URLs.
   let resolved;
   if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
-    resolved = new URL(specifier, base);
+    // resolved = new URL(specifier, base);
+    return resolveFilePath(specifier, base);
   } else if (specifier[0] === "#") {
     ({ resolved } = packageImportsResolve(
       packageResolve,
@@ -163,6 +165,25 @@ function myModuleResolve(specifier, base, conditions) {
     }
   }
   return finalizeResolution(resolved, base);
+}
+
+function resolveFilePath(specifier, base) {
+  // If file ends in .ts use it as-is
+  if (isTypescriptFile(specifier)) {
+    const url = new URL(specifier, base);
+    console.log("RESOLVE: RETURN", url.href);
+    return url;
+  }
+
+  // Try to add `.ts` extension and resolve
+  let url = new URL(specifier + ".ts", base);
+  const path = fileURLToPath(url);
+  if (fs.existsSync(path)) {
+    console.log("RESOLVE: RETURN", url.href);
+    return url;
+  }
+
+  return new URL(specifier, base);
 }
 
 /**
