@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.foo = void 0;
-const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, isArrayIndex, isRelativeSpecifier, shouldBeTreatedAsRelativeOrAbsolutePath, resolveAsCommonJS, } = require("./resolve_nofs");
+const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, isArrayIndex, isRelativeSpecifier, shouldBeTreatedAsRelativeOrAbsolutePath, resolveAsCommonJS, packageImportsResolve, packageExportsResolve, } = require("./resolve_nofs");
 // "use strict";
 exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
@@ -323,65 +323,108 @@ function isConditionalExportsMainSugar(exports, packageJSONUrl, base) {
     }
     return isConditionalSugar;
 }
-/**
- * @param {URL} packageJSONUrl
- * @param {string} packageSubpath
- * @param {PackageConfig} packageConfig
- * @param {string | URL | undefined} base
- * @param {Set<string>} conditions
- * @returns {URL}
- */
-function packageExportsResolve(packageJSONUrl, packageSubpath, packageConfig, base, conditions) {
-    let exports = packageConfig.exports;
-    if (isConditionalExportsMainSugar(exports, packageJSONUrl, base))
-        exports = { ".": exports };
-    if (ObjectPrototypeHasOwnProperty(exports, packageSubpath) &&
-        !StringPrototypeIncludes(packageSubpath, "*") &&
-        !StringPrototypeEndsWith(packageSubpath, "/")) {
-        const target = exports[packageSubpath];
-        const resolved = resolvePackageTarget(packageJSONUrl, target, "", packageSubpath, base, false, false, conditions);
-        if (resolved === null || resolved === undefined)
-            throwExportsNotFound(packageSubpath, packageJSONUrl, base);
-        return { resolved, exact: true };
-    }
-    let bestMatch = "";
-    let bestMatchSubpath;
-    const keys = ObjectGetOwnPropertyNames(exports);
-    for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
-        const patternIndex = StringPrototypeIndexOf(key, "*");
-        if (patternIndex !== -1 &&
-            StringPrototypeStartsWith(packageSubpath, StringPrototypeSlice(key, 0, patternIndex))) {
-            if (StringPrototypeEndsWith(packageSubpath, "/"))
-                emitTrailingSlashPatternDeprecation(packageSubpath, packageJSONUrl, true, base);
-            const patternTrailer = StringPrototypeSlice(key, patternIndex + 1);
-            if (packageSubpath.length >= key.length &&
-                StringPrototypeEndsWith(packageSubpath, patternTrailer) &&
-                patternKeyCompare(bestMatch, key) === 1 &&
-                StringPrototypeLastIndexOf(key, "*") === patternIndex) {
-                bestMatch = key;
-                bestMatchSubpath = StringPrototypeSlice(packageSubpath, patternIndex, packageSubpath.length - patternTrailer.length);
-            }
-        }
-        else if (key[key.length - 1] === "/" &&
-            StringPrototypeStartsWith(packageSubpath, key) &&
-            patternKeyCompare(bestMatch, key) === 1) {
-            bestMatch = key;
-            bestMatchSubpath = StringPrototypeSlice(packageSubpath, key.length);
-        }
-    }
-    if (bestMatch) {
-        const target = exports[bestMatch];
-        const pattern = StringPrototypeIncludes(bestMatch, "*");
-        const resolved = resolvePackageTarget(packageJSONUrl, target, bestMatchSubpath, bestMatch, base, pattern, false, conditions);
-        if (resolved === null || resolved === undefined)
-            throwExportsNotFound(packageSubpath, packageJSONUrl, base);
-        if (!pattern)
-            emitFolderMapDeprecation(bestMatch, packageJSONUrl, true, base);
-        return { resolved, exact: pattern };
-    }
-    throwExportsNotFound(packageSubpath, packageJSONUrl, base);
-}
+// /**
+//  * @param {URL} packageJSONUrl
+//  * @param {string} packageSubpath
+//  * @param {PackageConfig} packageConfig
+//  * @param {string | URL | undefined} base
+//  * @param {Set<string>} conditions
+//  * @returns {URL}
+//  */
+// function packageExportsResolve(
+//   packageJSONUrl,
+//   packageSubpath,
+//   packageConfig,
+//   base,
+//   conditions
+// ) {
+//   let exports = packageConfig.exports;
+//   if (isConditionalExportsMainSugar(exports, packageJSONUrl, base))
+//     exports = { ".": exports };
+//   if (
+//     ObjectPrototypeHasOwnProperty(exports, packageSubpath) &&
+//     !StringPrototypeIncludes(packageSubpath, "*") &&
+//     !StringPrototypeEndsWith(packageSubpath, "/")
+//   ) {
+//     const target = exports[packageSubpath];
+//     const resolved = resolvePackageTarget(
+//       packageJSONUrl,
+//       target,
+//       "",
+//       packageSubpath,
+//       base,
+//       false,
+//       false,
+//       conditions
+//     );
+//     if (resolved === null || resolved === undefined)
+//       throwExportsNotFound(packageSubpath, packageJSONUrl, base);
+//     return { resolved, exact: true };
+//   }
+//   let bestMatch = "";
+//   let bestMatchSubpath;
+//   const keys = ObjectGetOwnPropertyNames(exports);
+//   for (let i = 0; i < keys.length; i++) {
+//     const key = keys[i];
+//     const patternIndex = StringPrototypeIndexOf(key, "*");
+//     if (
+//       patternIndex !== -1 &&
+//       StringPrototypeStartsWith(
+//         packageSubpath,
+//         StringPrototypeSlice(key, 0, patternIndex)
+//       )
+//     ) {
+//       if (StringPrototypeEndsWith(packageSubpath, "/"))
+//         emitTrailingSlashPatternDeprecation(
+//           packageSubpath,
+//           packageJSONUrl,
+//           true,
+//           base
+//         );
+//       const patternTrailer = StringPrototypeSlice(key, patternIndex + 1);
+//       if (
+//         packageSubpath.length >= key.length &&
+//         StringPrototypeEndsWith(packageSubpath, patternTrailer) &&
+//         patternKeyCompare(bestMatch, key) === 1 &&
+//         StringPrototypeLastIndexOf(key, "*") === patternIndex
+//       ) {
+//         bestMatch = key;
+//         bestMatchSubpath = StringPrototypeSlice(
+//           packageSubpath,
+//           patternIndex,
+//           packageSubpath.length - patternTrailer.length
+//         );
+//       }
+//     } else if (
+//       key[key.length - 1] === "/" &&
+//       StringPrototypeStartsWith(packageSubpath, key) &&
+//       patternKeyCompare(bestMatch, key) === 1
+//     ) {
+//       bestMatch = key;
+//       bestMatchSubpath = StringPrototypeSlice(packageSubpath, key.length);
+//     }
+//   }
+//   if (bestMatch) {
+//     const target = exports[bestMatch];
+//     const pattern = StringPrototypeIncludes(bestMatch, "*");
+//     const resolved = resolvePackageTarget(
+//       packageJSONUrl,
+//       target,
+//       bestMatchSubpath,
+//       bestMatch,
+//       base,
+//       pattern,
+//       false,
+//       conditions
+//     );
+//     if (resolved === null || resolved === undefined)
+//       throwExportsNotFound(packageSubpath, packageJSONUrl, base);
+//     if (!pattern)
+//       emitFolderMapDeprecation(bestMatch, packageJSONUrl, true, base);
+//     return { resolved, exact: pattern };
+//   }
+//   throwExportsNotFound(packageSubpath, packageJSONUrl, base);
+// }
 function patternKeyCompare(a, b) {
     const aPatternIndex = StringPrototypeIndexOf(a, "*");
     const bPatternIndex = StringPrototypeIndexOf(b, "*");
@@ -401,70 +444,100 @@ function patternKeyCompare(a, b) {
         return 1;
     return 0;
 }
-/**
- * @param {string} name
- * @param {string | URL | undefined} base
- * @param {Set<string>} conditions
- * @returns
- */
-function packageImportsResolve(name, base, conditions) {
-    if (name === "#" || StringPrototypeStartsWith(name, "#/")) {
-        const reason = "is not a valid internal imports specifier name";
-        throw new ERR_INVALID_MODULE_SPECIFIER(name, reason, fileURLToPath(base));
-    }
-    let packageJSONUrl;
-    const packageConfig = getPackageScopeConfig(base);
-    if (packageConfig.exists) {
-        packageJSONUrl = pathToFileURL(packageConfig.pjsonPath);
-        const imports = packageConfig.imports;
-        if (imports) {
-            if (ObjectPrototypeHasOwnProperty(imports, name) &&
-                !StringPrototypeIncludes(name, "*") &&
-                !StringPrototypeEndsWith(name, "/")) {
-                const resolved = resolvePackageTarget(packageJSONUrl, imports[name], "", name, base, false, true, conditions);
-                if (resolved !== null)
-                    return { resolved, exact: true };
-            }
-            else {
-                let bestMatch = "";
-                let bestMatchSubpath;
-                const keys = ObjectGetOwnPropertyNames(imports);
-                for (let i = 0; i < keys.length; i++) {
-                    const key = keys[i];
-                    const patternIndex = StringPrototypeIndexOf(key, "*");
-                    if (patternIndex !== -1 &&
-                        StringPrototypeStartsWith(name, StringPrototypeSlice(key, 0, patternIndex))) {
-                        const patternTrailer = StringPrototypeSlice(key, patternIndex + 1);
-                        if (name.length >= key.length &&
-                            StringPrototypeEndsWith(name, patternTrailer) &&
-                            patternKeyCompare(bestMatch, key) === 1 &&
-                            StringPrototypeLastIndexOf(key, "*") === patternIndex) {
-                            bestMatch = key;
-                            bestMatchSubpath = StringPrototypeSlice(name, patternIndex, name.length - patternTrailer.length);
-                        }
-                    }
-                    else if (key[key.length - 1] === "/" &&
-                        StringPrototypeStartsWith(name, key) &&
-                        patternKeyCompare(bestMatch, key) === 1) {
-                        bestMatch = key;
-                        bestMatchSubpath = StringPrototypeSlice(name, key.length);
-                    }
-                }
-                if (bestMatch) {
-                    const target = imports[bestMatch];
-                    const pattern = StringPrototypeIncludes(bestMatch, "*");
-                    const resolved = resolvePackageTarget(packageJSONUrl, target, bestMatchSubpath, bestMatch, base, pattern, true, conditions);
-                    if (resolved !== null) {
-                        if (!pattern)
-                            emitFolderMapDeprecation(bestMatch, packageJSONUrl, false, base);
-                        return { resolved, exact: pattern };
-                    }
-                }
-            }
-        }
-    }
-    throwImportNotDefined(name, packageJSONUrl, base);
-}
+// /**
+//  * @param {string} name
+//  * @param {string | URL | undefined} base
+//  * @param {Set<string>} conditions
+//  * @returns
+//  */
+// function packageImportsResolve(name, base, conditions) {
+//   if (name === "#" || StringPrototypeStartsWith(name, "#/")) {
+//     const reason = "is not a valid internal imports specifier name";
+//     throw new ERR_INVALID_MODULE_SPECIFIER(name, reason, fileURLToPath(base));
+//   }
+//   let packageJSONUrl;
+//   const packageConfig = getPackageScopeConfig(base);
+//   if (packageConfig.exists) {
+//     packageJSONUrl = pathToFileURL(packageConfig.pjsonPath);
+//     const imports = packageConfig.imports;
+//     if (imports) {
+//       if (
+//         ObjectPrototypeHasOwnProperty(imports, name) &&
+//         !StringPrototypeIncludes(name, "*") &&
+//         !StringPrototypeEndsWith(name, "/")
+//       ) {
+//         const resolved = resolvePackageTarget(
+//           packageJSONUrl,
+//           imports[name],
+//           "",
+//           name,
+//           base,
+//           false,
+//           true,
+//           conditions
+//         );
+//         if (resolved !== null) return { resolved, exact: true };
+//       } else {
+//         let bestMatch = "";
+//         let bestMatchSubpath;
+//         const keys = ObjectGetOwnPropertyNames(imports);
+//         for (let i = 0; i < keys.length; i++) {
+//           const key = keys[i];
+//           const patternIndex = StringPrototypeIndexOf(key, "*");
+//           if (
+//             patternIndex !== -1 &&
+//             StringPrototypeStartsWith(
+//               name,
+//               StringPrototypeSlice(key, 0, patternIndex)
+//             )
+//           ) {
+//             const patternTrailer = StringPrototypeSlice(key, patternIndex + 1);
+//             if (
+//               name.length >= key.length &&
+//               StringPrototypeEndsWith(name, patternTrailer) &&
+//               patternKeyCompare(bestMatch, key) === 1 &&
+//               StringPrototypeLastIndexOf(key, "*") === patternIndex
+//             ) {
+//               bestMatch = key;
+//               bestMatchSubpath = StringPrototypeSlice(
+//                 name,
+//                 patternIndex,
+//                 name.length - patternTrailer.length
+//               );
+//             }
+//           } else if (
+//             key[key.length - 1] === "/" &&
+//             StringPrototypeStartsWith(name, key) &&
+//             patternKeyCompare(bestMatch, key) === 1
+//           ) {
+//             bestMatch = key;
+//             bestMatchSubpath = StringPrototypeSlice(name, key.length);
+//           }
+//         }
+//         if (bestMatch) {
+//           const target = imports[bestMatch];
+//           const pattern = StringPrototypeIncludes(bestMatch, "*");
+//           const resolved = resolvePackageTarget(
+//             packageJSONUrl,
+//             target,
+//             bestMatchSubpath,
+//             bestMatch,
+//             base,
+//             pattern,
+//             true,
+//             conditions
+//           );
+//           if (resolved !== null) {
+//             if (!pattern)
+//               emitFolderMapDeprecation(bestMatch, packageJSONUrl, false, base);
+//             return { resolved, exact: pattern };
+//           }
+//         }
+//       }
+//     }
+//   }
+//   throwImportNotDefined(name, packageJSONUrl, base);
+// }
 /**
  * @param {URL} url
  * @returns {PackageType}
@@ -526,7 +599,7 @@ function packageResolve(specifier, base, conditions) {
         if (packageConfig.name === packageName &&
             packageConfig.exports !== undefined &&
             packageConfig.exports !== null) {
-            return packageExportsResolve(packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
+            return packageExportsResolve(packageResolve, packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
         }
     }
     let packageJSONUrl = new URL("./node_modules/" + packageName + "/package.json", base);
@@ -545,7 +618,7 @@ function packageResolve(specifier, base, conditions) {
         // Package match.
         const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
         if (packageConfig.exports !== undefined && packageConfig.exports !== null)
-            return packageExportsResolve(packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
+            return packageExportsResolve(packageResolve, packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
         if (packageSubpath === ".")
             return legacyMainResolve(packageJSONUrl, packageConfig, base);
         return new URL(packageSubpath, packageJSONUrl);
@@ -576,7 +649,7 @@ function moduleResolve(specifier, base, conditions) {
         resolved = new URL(specifier, base);
     }
     else if (specifier[0] === "#") {
-        ({ resolved } = packageImportsResolve(specifier, base, conditions));
+        ({ resolved } = packageImportsResolve(packageResolve, specifier, base, conditions));
     }
     else {
         try {
@@ -690,8 +763,8 @@ module.exports = {
     encodedSepRegEx,
     getPackageScopeConfig,
     getPackageType,
-    packageExportsResolve,
-    packageImportsResolve,
+    // packageExportsResolve,
+    // packageImportsResolve,
 };
 // cycle
 const { defaultGetFormat } = require("../support/get_format");
