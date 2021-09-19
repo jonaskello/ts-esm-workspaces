@@ -70,7 +70,10 @@ function myModuleResolve(specifier, base, conditions) {
     } catch {
       console.log("myModuleResolve: packageResolve");
       resolved = packageResolve(specifier, base, conditions);
-      console.log("myModuleResolve: packageResolve RETURN", resolved);
+      if (Array.isArray(resolved)) {
+        resolved = probeForLegacyIndex(resolved);
+      }
+      console.log("myModuleResolve: packageResolve RETURN", resolved.href);
     }
   }
   console.log("myModuleResolve: END", resolved.href);
@@ -150,7 +153,8 @@ function packageResolve(specifier, base, conditions) {
         conditions
       ).resolved;
     if (packageSubpath === ".")
-      return legacyMainResolve(packageJSONUrl, packageConfig, base);
+      // return legacyMainResolve(packageJSONUrl, packageConfig, base);
+      return legacyMainResolve2(packageJSONUrl, packageConfig);
     return new URL(packageSubpath, packageJSONUrl);
   }
 
@@ -215,6 +219,104 @@ function resolveSelf(base, packageName, packageSubpath, conditions) {
   return undefined;
 }
 
+// /**
+//  * Legacy CommonJS main resolution:
+//  * 1. let M = pkg_url + (json main field)
+//  * 2. TRY(M, M.js, M.json, M.node)
+//  * 3. TRY(M/index.js, M/index.json, M/index.node)
+//  * 4. TRY(pkg_url/index.js, pkg_url/index.json, pkg_url/index.node)
+//  * 5. NOT_FOUND
+//  * @param {URL} packageJSONUrl
+//  * @param {PackageConfig} packageConfig
+//  * @param {string | URL | undefined} base
+//  * @returns {URL}
+//  */
+// function legacyMainResolve(packageJSONUrl, packageConfig, base) {
+//   let guess;
+//   if (packageConfig.main !== undefined) {
+//     // Note: fs check redundances will be handled by Descriptor cache here.
+//     if (
+//       fileExists((guess = new URL(`./${packageConfig.main}`, packageJSONUrl)))
+//     ) {
+//       return guess;
+//     } else if (
+//       fileExists(
+//         (guess = new URL(`./${packageConfig.main}.js`, packageJSONUrl))
+//       )
+//     ) {
+//     } else if (
+//       fileExists(
+//         (guess = new URL(`./${packageConfig.main}.json`, packageJSONUrl))
+//       )
+//     ) {
+//     } else if (
+//       fileExists(
+//         (guess = new URL(`./${packageConfig.main}.node`, packageJSONUrl))
+//       )
+//     ) {
+//     } else if (
+//       fileExists(
+//         (guess = new URL(`./${packageConfig.main}/index.js`, packageJSONUrl))
+//       )
+//     ) {
+//     } else if (
+//       fileExists(
+//         (guess = new URL(`./${packageConfig.main}/index.json`, packageJSONUrl))
+//       )
+//     ) {
+//     } else if (
+//       fileExists(
+//         (guess = new URL(`./${packageConfig.main}/index.node`, packageJSONUrl))
+//       )
+//     ) {
+//     } else guess = undefined;
+//     if (guess) {
+//       emitLegacyIndexDeprecation(
+//         guess,
+//         packageJSONUrl,
+//         base,
+//         packageConfig.main
+//       );
+//       return guess;
+//     }
+//     // Fallthrough.
+//   }
+//   if (fileExists((guess = new URL("./index.js", packageJSONUrl)))) {
+//   } else if (fileExists((guess = new URL("./index.json", packageJSONUrl)))) {
+//   } else if (fileExists((guess = new URL("./index.node", packageJSONUrl)))) {
+//   } else guess = undefined;
+//   if (guess) {
+//     emitLegacyIndexDeprecation(guess, packageJSONUrl, base, packageConfig.main);
+//     return guess;
+//   }
+//   // Not found.
+//   throw new ERR_MODULE_NOT_FOUND(
+//     fileURLToPath(new URL(".", packageJSONUrl)),
+//     fileURLToPath(base)
+//   );
+// }
+
+function probeForLegacyIndex(urls) {
+  for (const url of urls) {
+    if (fileExists(url)) {
+      emitLegacyIndexDeprecation(
+        url,
+        "packageJSONUrl",
+        "base",
+        "packageConfig.main"
+      );
+      return url;
+    }
+  }
+}
+
+// type LegacyIndexGuess = {
+//   path: string;
+//   packageJSONUrl: URL;
+//   base: string;
+//   packageConfigMain: string;
+// };
+
 /**
  * Legacy CommonJS main resolution:
  * 1. let M = pkg_url + (json main field)
@@ -222,74 +324,34 @@ function resolveSelf(base, packageName, packageSubpath, conditions) {
  * 3. TRY(M/index.js, M/index.json, M/index.node)
  * 4. TRY(pkg_url/index.js, pkg_url/index.json, pkg_url/index.node)
  * 5. NOT_FOUND
- * @param {URL} packageJSONUrl
  * @param {PackageConfig} packageConfig
  * @param {string | URL | undefined} base
  * @returns {URL}
  */
-function legacyMainResolve(packageJSONUrl, packageConfig, base) {
-  let guess;
+function legacyMainResolve2(packageJSONUrl, packageConfig) {
+  const guess: any = [];
   if (packageConfig.main !== undefined) {
-    // Note: fs check redundances will be handled by Descriptor cache here.
-    if (
-      fileExists((guess = new URL(`./${packageConfig.main}`, packageJSONUrl)))
-    ) {
-      return guess;
-    } else if (
-      fileExists(
-        (guess = new URL(`./${packageConfig.main}.js`, packageJSONUrl))
-      )
-    ) {
-    } else if (
-      fileExists(
-        (guess = new URL(`./${packageConfig.main}.json`, packageJSONUrl))
-      )
-    ) {
-    } else if (
-      fileExists(
-        (guess = new URL(`./${packageConfig.main}.node`, packageJSONUrl))
-      )
-    ) {
-    } else if (
-      fileExists(
-        (guess = new URL(`./${packageConfig.main}/index.js`, packageJSONUrl))
-      )
-    ) {
-    } else if (
-      fileExists(
-        (guess = new URL(`./${packageConfig.main}/index.json`, packageJSONUrl))
-      )
-    ) {
-    } else if (
-      fileExists(
-        (guess = new URL(`./${packageConfig.main}/index.node`, packageJSONUrl))
-      )
-    ) {
-    } else guess = undefined;
-    if (guess) {
-      emitLegacyIndexDeprecation(
-        guess,
-        packageJSONUrl,
-        base,
-        packageConfig.main
-      );
-      return guess;
-    }
-    // Fallthrough.
+    guess.push(
+      ...[
+        new URL(`./${packageConfig.main}.node`, packageJSONUrl),
+        new URL(`./${packageConfig.main}`, packageJSONUrl),
+        new URL(`./${packageConfig.main}.js`, packageJSONUrl),
+        new URL(`./${packageConfig.main}.json`, packageJSONUrl),
+        new URL(`./${packageConfig.main}.node`, packageJSONUrl),
+        new URL(`./${packageConfig.main}/index.js`, packageJSONUrl),
+        new URL(`./${packageConfig.main}/index.json`, packageJSONUrl),
+        new URL(`./${packageConfig.main}/index.node`, packageJSONUrl),
+      ]
+    );
   }
-  if (fileExists((guess = new URL("./index.js", packageJSONUrl)))) {
-  } else if (fileExists((guess = new URL("./index.json", packageJSONUrl)))) {
-  } else if (fileExists((guess = new URL("./index.node", packageJSONUrl)))) {
-  } else guess = undefined;
-  if (guess) {
-    emitLegacyIndexDeprecation(guess, packageJSONUrl, base, packageConfig.main);
-    return guess;
-  }
-  // Not found.
-  throw new ERR_MODULE_NOT_FOUND(
-    fileURLToPath(new URL(".", packageJSONUrl)),
-    fileURLToPath(base)
+  guess.push(
+    ...[
+      new URL("./index.js", packageJSONUrl),
+      new URL("./index.json", packageJSONUrl),
+      new URL("./index.node", packageJSONUrl),
+    ]
   );
+  return guess;
 }
 
 /**
