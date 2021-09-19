@@ -387,7 +387,7 @@ function moduleResolve(specifier, base, conditions) {
   return finalizeResolution(resolved, base);
 }
 
-function defaultResolve(specifier, context: any = {}, defaultResolveUnused) {
+function defaultResolveApi(specifier, context: any = {}, defaultResolveUnused) {
   let { parentURL, conditions } = context;
   if (parentURL && policy?.manifest) {
     const redirects = policy.manifest.getDependencyMapper(parentURL);
@@ -496,7 +496,7 @@ function defaultResolve(specifier, context: any = {}, defaultResolveUnused) {
 
 module.exports = {
   DEFAULT_CONDITIONS,
-  defaultResolve,
+  defaultResolveApi,
   encodedSepRegEx,
   getPackageScopeConfig,
   getPackageType,

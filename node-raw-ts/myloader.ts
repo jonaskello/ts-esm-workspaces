@@ -2,7 +2,7 @@ import { URL, pathToFileURL, fileURLToPath } from "url";
 import { transformSync } from "esbuild";
 import fs from "fs";
 
-import { defaultResolve } from "./node-raw-ts/built/resolve_fs";
+const { defaultResolveApi } = require("./resolve_fs");
 
 const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
@@ -33,7 +33,7 @@ export function resolve(specifier, context) {
   console.log("RESOLVE: FORWARD", specifier);
 
   // Let Node.js handle all other specifiers.
-  return defaultResolve(specifier, context, defaultResolve);
+  return defaultResolveApi(specifier, context);
 }
 
 export async function load(url, context, defaultLoad) {

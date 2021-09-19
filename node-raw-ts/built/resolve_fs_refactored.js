@@ -265,49 +265,11 @@ function moduleResolve(specifier, base, conditions) {
     }
     return finalizeResolution(resolved, base);
 }
-function defaultResolveApi(specifier, context = {}, defaultResolveUnused) {
+function defaultResolve(specifier, context = {}, defaultResolveUnused) {
     let { parentURL, conditions } = context;
-    if (parentURL && policy?.manifest) {
-        const redirects = policy.manifest.getDependencyMapper(parentURL);
-        if (redirects) {
-            const { resolve, reaction } = redirects;
-            const destination = resolve(specifier, new SafeSet(conditions));
-            let missing = true;
-            if (destination === true) {
-                missing = false;
-            }
-            else if (destination) {
-                const href = destination.href;
-                return { url: href };
-            }
-            if (missing) {
-                reaction(new ERR_MANIFEST_DEPENDENCY_MISSING(parentURL, specifier, ArrayPrototypeJoin([...conditions], ", ")));
-            }
-        }
-    }
-    let parsed;
-    try {
-        parsed = new URL(specifier);
-        if (parsed.protocol === "data:") {
-            return {
-                url: specifier,
-            };
-        }
-    }
-    catch { }
-    if (parsed && parsed.protocol === "node:")
-        return { url: specifier };
-    if (parsed && parsed.protocol !== "file:" && parsed.protocol !== "data:")
-        throw new ERR_UNSUPPORTED_ESM_URL_SCHEME(parsed);
-    if (NativeModule.canBeRequiredByUsers(specifier)) {
-        return {
-            url: "node:" + specifier,
-        };
-    }
-    if (parentURL && StringPrototypeStartsWith(parentURL, "data:")) {
-        // This is gonna blow up, we want the error
-        new URL(specifier, parentURL);
-    }
+    const nodeOrDataSpecifier = tryResolveNodeOrDataSpecifier(specifier, parentURL, conditions);
+    if (nodeOrDataSpecifier)
+        return nodeOrDataSpecifier;
     const isMain = parentURL === undefined;
     if (isMain) {
         parentURL = pathToFileURL(`${process.cwd()}/`).href;
@@ -363,12 +325,53 @@ function defaultResolveApi(specifier, context = {}, defaultResolveUnused) {
 }
 module.exports = {
     DEFAULT_CONDITIONS,
-    defaultResolveApi,
+    defaultResolve,
     encodedSepRegEx,
     getPackageScopeConfig,
     getPackageType,
-    // packageExportsResolve,
-    // packageImportsResolve,
 };
+function tryResolveNodeOrDataSpecifier(specifier, parentURL, conditions) {
+    if (parentURL && policy?.manifest) {
+        const redirects = policy.manifest.getDependencyMapper(parentURL);
+        if (redirects) {
+            const { resolve, reaction } = redirects;
+            const destination = resolve(specifier, new SafeSet(conditions));
+            let missing = true;
+            if (destination === true) {
+                missing = false;
+            }
+            else if (destination) {
+                const href = destination.href;
+                return { url: href };
+            }
+            if (missing) {
+                reaction(new ERR_MANIFEST_DEPENDENCY_MISSING(parentURL, specifier, ArrayPrototypeJoin([...conditions], ", ")));
+            }
+        }
+    }
+    let parsed;
+    try {
+        parsed = new URL(specifier);
+        if (parsed.protocol === "data:") {
+            return {
+                url: specifier,
+            };
+        }
+    }
+    catch { }
+    if (parsed && parsed.protocol === "node:")
+        return { url: specifier };
+    if (parsed && parsed.protocol !== "file:" && parsed.protocol !== "data:")
+        throw new ERR_UNSUPPORTED_ESM_URL_SCHEME(parsed);
+    if (NativeModule.canBeRequiredByUsers(specifier)) {
+        return {
+            url: "node:" + specifier,
+        };
+    }
+    if (parentURL && StringPrototypeStartsWith(parentURL, "data:")) {
+        // This is gonna blow up, we want the error
+        new URL(specifier, parentURL);
+    }
+}
 // cycle
 const { defaultGetFormat } = require("../support/get_format");
