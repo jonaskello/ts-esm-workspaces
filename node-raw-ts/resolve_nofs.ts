@@ -988,6 +988,15 @@ module.exports = {
   getPackageType,
   packageExportsResolve,
   packageImportsResolve,
+  emitLegacyIndexDeprecation,
+  getConditionsSet,
+  getPackageConfig,
+  throwImportNotDefined,
+  throwExportsNotFound,
+  throwInvalidSubpath,
+  throwInvalidPackageTarget,
+  resolvePackageTargetString,
+  isArrayIndex,
 };
 
 // cycle

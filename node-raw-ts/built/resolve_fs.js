@@ -1,7 +1,8 @@
 "use strict";
-// "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.foo = void 0;
+const { emitFolderMapDeprecation, emitTrailingSlashPatternDeprecation, emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, throwImportNotDefined, throwExportsNotFound, throwInvalidSubpath, throwInvalidPackageTarget, } = require("./resolve_nofs");
+// "use strict";
 exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
 // RegExp,
@@ -52,66 +53,6 @@ const DEFAULT_CONDITIONS_SET = new SafeSet(DEFAULT_CONDITIONS);
  *   type?: PackageType;
  * }} PackageConfig
  */
-const emittedPackageWarnings = new SafeSet();
-/**
- * @param {string} match
- * @param {URL} pjsonUrl
- * @param {boolean} isExports
- * @param {string | URL | undefined} base
- * @returns {void}
- */
-function emitFolderMapDeprecation(match, pjsonUrl, isExports, base) {
-    const pjsonPath = fileURLToPath(pjsonUrl);
-    if (emittedPackageWarnings.has(pjsonPath + "|" + match))
-        return;
-    emittedPackageWarnings.add(pjsonPath + "|" + match);
-    process.emitWarning(`Use of deprecated folder mapping "${match}" in the ${isExports ? '"exports"' : '"imports"'} field module resolution of the package at ${pjsonPath}${base ? ` imported from ${fileURLToPath(base)}` : ""}.\n` +
-        `Update this package.json to use a subpath pattern like "${match}*".`, "DeprecationWarning", "DEP0148");
-}
-function emitTrailingSlashPatternDeprecation(match, pjsonUrl, isExports, base) {
-    if (!pendingDeprecation)
-        return;
-    const pjsonPath = fileURLToPath(pjsonUrl);
-    if (emittedPackageWarnings.has(pjsonPath + "|" + match))
-        return;
-    emittedPackageWarnings.add(pjsonPath + "|" + match);
-    process.emitWarning(`Use of deprecated trailing slash pattern mapping "${match}" in the ${isExports ? '"exports"' : '"imports"'} field module resolution of the ` +
-        `package at ${pjsonPath}${base ? ` imported from ${fileURLToPath(base)}` : ""}. Mapping specifiers ending in "/" is no longer supported.`, "DeprecationWarning", "DEP0155");
-}
-/**
- * @param {URL} url
- * @param {URL} packageJSONUrl
- * @param {string | URL | undefined} base
- * @param {string} main
- * @returns
- */
-function emitLegacyIndexDeprecation(url, packageJSONUrl, base, main) {
-    const format = defaultGetFormat(url);
-    if (format !== "module")
-        return;
-    const path = fileURLToPath(url);
-    const pkgPath = fileURLToPath(new URL(".", packageJSONUrl));
-    const basePath = fileURLToPath(base);
-    if (main)
-        process.emitWarning(`Package ${pkgPath} has a "main" field set to ${JSONStringify(main)}, ` +
-            `excluding the full filename and extension to the resolved file at "${StringPrototypeSlice(path, pkgPath.length)}", imported from ${basePath}.\n Automatic extension resolution of the "main" field is ` +
-            "deprecated for ES modules.", "DeprecationWarning", "DEP0151");
-    else
-        process.emitWarning(`No "main" or "exports" field defined in the package.json for ${pkgPath} resolving the main entry point "${StringPrototypeSlice(path, pkgPath.length)}", imported from ${basePath}.\nDefault "index" lookups for the main are deprecated for ES modules.`, "DeprecationWarning", "DEP0151");
-}
-/**
- * @param {string[]} [conditions]
- * @returns {Set<string>}
- */
-function getConditionsSet(conditions) {
-    if (conditions !== undefined && conditions !== DEFAULT_CONDITIONS) {
-        if (!ArrayIsArray(conditions)) {
-            throw new ERR_INVALID_ARG_VALUE("conditions", conditions, "expected an array");
-        }
-        return new SafeSet(conditions);
-    }
-    return DEFAULT_CONDITIONS_SET;
-}
 const realpathCache = new SafeMap();
 const packageJSONCache = new SafeMap(); /* string -> PackageConfig */
 /**
@@ -119,94 +60,6 @@ const packageJSONCache = new SafeMap(); /* string -> PackageConfig */
  * @returns {import('fs').Stats}
  */
 const tryStatSync = (path) => statSync(path, { throwIfNoEntry: false }) ?? new Stats();
-/**
- * @param {string} path
- * @param {string} specifier
- * @param {string | URL | undefined} base
- * @returns {PackageConfig}
- */
-function getPackageConfig(path, specifier, base) {
-    const existing = packageJSONCache.get(path);
-    if (existing !== undefined) {
-        return existing;
-    }
-    const source = packageJsonReader.read(path).string;
-    if (source === undefined) {
-        const packageConfig = {
-            pjsonPath: path,
-            exists: false,
-            main: undefined,
-            name: undefined,
-            type: "none",
-            exports: undefined,
-            imports: undefined,
-        };
-        packageJSONCache.set(path, packageConfig);
-        return packageConfig;
-    }
-    let packageJSON;
-    try {
-        packageJSON = JSONParse(source);
-    }
-    catch (error) {
-        throw new ERR_INVALID_PACKAGE_CONFIG(path, (base ? `"${specifier}" from ` : "") + fileURLToPath(base || specifier), error.message);
-    }
-    let { imports, main, name, type } = packageJSON;
-    const { exports } = packageJSON;
-    if (typeof imports !== "object" || imports === null)
-        imports = undefined;
-    if (typeof main !== "string")
-        main = undefined;
-    if (typeof name !== "string")
-        name = undefined;
-    // Ignore unknown types for forwards compatibility
-    if (type !== "module" && type !== "commonjs")
-        type = "none";
-    const packageConfig = {
-        pjsonPath: path,
-        exists: true,
-        main,
-        name,
-        type,
-        exports,
-        imports,
-    };
-    packageJSONCache.set(path, packageConfig);
-    return packageConfig;
-}
-/**
- * @param {URL | string} resolved
- * @returns {PackageConfig}
- */
-function getPackageScopeConfig(resolved) {
-    let packageJSONUrl = new URL("./package.json", resolved);
-    while (true) {
-        const packageJSONPath = packageJSONUrl.pathname;
-        if (StringPrototypeEndsWith(packageJSONPath, "node_modules/package.json"))
-            break;
-        const packageConfig = getPackageConfig(fileURLToPath(packageJSONUrl), resolved);
-        if (packageConfig.exists)
-            return packageConfig;
-        const lastPackageJSONUrl = packageJSONUrl;
-        packageJSONUrl = new URL("../package.json", packageJSONUrl);
-        // Terminates at root where ../package.json equals ../../package.json
-        // (can't just check "/package.json" for Windows support).
-        if (packageJSONUrl.pathname === lastPackageJSONUrl.pathname)
-            break;
-    }
-    const packageJSONPath = fileURLToPath(packageJSONUrl);
-    const packageConfig = {
-        pjsonPath: packageJSONPath,
-        exists: false,
-        main: undefined,
-        name: undefined,
-        type: "none",
-        exports: undefined,
-        imports: undefined,
-    };
-    packageJSONCache.set(packageJSONPath, packageConfig);
-    return packageConfig;
-}
 /**
  * @param {string | URL} url
  * @returns {boolean}
@@ -344,42 +197,6 @@ function finalizeResolution(resolved, base) {
         throw new ERR_MODULE_NOT_FOUND(path || resolved.pathname, base && fileURLToPath(base), "module");
     }
     return resolved;
-}
-/**
- * @param {string} specifier
- * @param {URL} packageJSONUrl
- * @param {string | URL | undefined} base
- */
-function throwImportNotDefined(specifier, packageJSONUrl, base) {
-    throw new ERR_PACKAGE_IMPORT_NOT_DEFINED(specifier, packageJSONUrl && fileURLToPath(new URL(".", packageJSONUrl)), fileURLToPath(base));
-}
-/**
- * @param {string} specifier
- * @param {URL} packageJSONUrl
- * @param {string | URL | undefined} base
- */
-function throwExportsNotFound(subpath, packageJSONUrl, base) {
-    throw new ERR_PACKAGE_PATH_NOT_EXPORTED(fileURLToPath(new URL(".", packageJSONUrl)), subpath, base && fileURLToPath(base));
-}
-/**
- *
- * @param {string | URL} subpath
- * @param {URL} packageJSONUrl
- * @param {boolean} internal
- * @param {string | URL | undefined} base
- */
-function throwInvalidSubpath(subpath, packageJSONUrl, internal, base) {
-    const reason = `request is not a valid subpath for the "${internal ? "imports" : "exports"}" resolution of ${fileURLToPath(packageJSONUrl)}`;
-    throw new ERR_INVALID_MODULE_SPECIFIER(subpath, reason, base && fileURLToPath(base));
-}
-function throwInvalidPackageTarget(subpath, target, packageJSONUrl, internal, base) {
-    if (typeof target === "object" && target !== null) {
-        target = JSONStringify(target, null, "");
-    }
-    else {
-        target = `${target}`;
-    }
-    throw new ERR_INVALID_PACKAGE_TARGET(fileURLToPath(new URL(".", packageJSONUrl)), subpath, target, internal, base && fileURLToPath(base));
 }
 const invalidSegmentRegEx = /(^|\\|\/)(\.\.?|node_modules)(\\|\/|$)/;
 const patternRegEx = /\*/g;

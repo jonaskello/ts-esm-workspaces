@@ -2,7 +2,7 @@ import { URL, pathToFileURL, fileURLToPath } from "url";
 import { transformSync } from "esbuild";
 import fs from "fs";
 
-import { defaultResolve } from "./node-raw-ts/built/resolve";
+import { defaultResolve } from "./node-raw-ts/built/resolve_fs";
 
 const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
