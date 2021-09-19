@@ -7,7 +7,9 @@ exports.load = exports.resolve = void 0;
 const url_1 = require("url");
 const esbuild_1 = require("esbuild");
 const fs_1 = __importDefault(require("fs"));
-const { defaultResolveApi } = require("./resolve_fs");
+const { statSync, Stats } = require("fs");
+const { emitLegacyIndexDeprecation, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
+const { defaultResolveApi, finalizeResolution, ERR_MODULE_NOT_FOUND, } = require("./resolve_fs");
 const baseURL = (0, url_1.pathToFileURL)(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
 function resolve(specifier, context) {
@@ -31,7 +33,7 @@ function resolve(specifier, context) {
     }
     console.log("RESOLVE: FORWARD", specifier);
     // Let Node.js handle all other specifiers.
-    return defaultResolveApi(specifier, context);
+    return defaultResolveApi(specifier, context, myModuleResolve);
 }
 exports.resolve = resolve;
 async function load(url, context, defaultLoad) {
@@ -100,3 +102,142 @@ If a .js file is part of the current compilation, we need to backtrack to find t
 So instead of just chaning the extension from .js to .ts, or just adding .ts to the exensionless specifier
 
 */
+/**
+ * @param {string} specifier
+ * @param {string | URL | undefined} base
+ * @param {Set<string>} conditions
+ * @returns {URL}
+ */
+function myModuleResolve(specifier, base, conditions) {
+    console.log("myModuleResolvemyModuleResolvemyModuleResolvemyModuleResolve");
+    // Order swapped from spec for minor perf gain.
+    // Ok since relative URLs cannot parse as URLs.
+    let resolved;
+    if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
+        resolved = new url_1.URL(specifier, base);
+    }
+    else if (specifier[0] === "#") {
+        ({ resolved } = packageImportsResolve(packageResolve, specifier, base, conditions));
+    }
+    else {
+        try {
+            resolved = new url_1.URL(specifier);
+        }
+        catch {
+            resolved = packageResolve(specifier, base, conditions);
+        }
+    }
+    return finalizeResolution(resolved, base);
+}
+/**
+ * @param {string} specifier
+ * @param {string | URL | undefined} base
+ * @param {Set<string>} conditions
+ * @returns {URL}
+ */
+function packageResolve(specifier, base, conditions) {
+    const { packageName, packageSubpath, isScoped } = parsePackageName(specifier, base);
+    // ResolveSelf
+    const packageConfig = getPackageScopeConfig(base);
+    if (packageConfig.exists) {
+        const packageJSONUrl = (0, url_1.pathToFileURL)(packageConfig.pjsonPath);
+        if (packageConfig.name === packageName &&
+            packageConfig.exports !== undefined &&
+            packageConfig.exports !== null) {
+            return packageExportsResolve(packageResolve, packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
+        }
+    }
+    let packageJSONUrl = new url_1.URL("./node_modules/" + packageName + "/package.json", base);
+    let packageJSONPath = (0, url_1.fileURLToPath)(packageJSONUrl);
+    let lastPath;
+    do {
+        const stat = tryStatSync(
+        // StringPrototypeSlice(packageJSONPath, 0, packageJSONPath.length - 13)
+        packageJSONPath.slice(0, packageJSONPath.length - 13));
+        if (!stat.isDirectory()) {
+            lastPath = packageJSONPath;
+            packageJSONUrl = new url_1.URL((isScoped ? "../../../../node_modules/" : "../../../node_modules/") +
+                packageName +
+                "/package.json", packageJSONUrl);
+            packageJSONPath = (0, url_1.fileURLToPath)(packageJSONUrl);
+            continue;
+        }
+        // Package match.
+        const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
+        if (packageConfig.exports !== undefined && packageConfig.exports !== null)
+            return packageExportsResolve(packageResolve, packageJSONUrl, packageSubpath, packageConfig, base, conditions).resolved;
+        if (packageSubpath === ".")
+            return legacyMainResolve(packageJSONUrl, packageConfig, base);
+        return new url_1.URL(packageSubpath, packageJSONUrl);
+        // Cross-platform root check.
+    } while (packageJSONPath.length !== lastPath.length);
+    // eslint can't handle the above code.
+    // eslint-disable-next-line no-unreachable
+    throw new ERR_MODULE_NOT_FOUND(packageName, (0, url_1.fileURLToPath)(base));
+}
+/**
+ * Legacy CommonJS main resolution:
+ * 1. let M = pkg_url + (json main field)
+ * 2. TRY(M, M.js, M.json, M.node)
+ * 3. TRY(M/index.js, M/index.json, M/index.node)
+ * 4. TRY(pkg_url/index.js, pkg_url/index.json, pkg_url/index.node)
+ * 5. NOT_FOUND
+ * @param {URL} packageJSONUrl
+ * @param {PackageConfig} packageConfig
+ * @param {string | URL | undefined} base
+ * @returns {URL}
+ */
+function legacyMainResolve(packageJSONUrl, packageConfig, base) {
+    let guess;
+    if (packageConfig.main !== undefined) {
+        // Note: fs check redundances will be handled by Descriptor cache here.
+        if (fileExists((guess = new url_1.URL(`./${packageConfig.main}`, packageJSONUrl)))) {
+            return guess;
+        }
+        else if (fileExists((guess = new url_1.URL(`./${packageConfig.main}.js`, packageJSONUrl)))) {
+        }
+        else if (fileExists((guess = new url_1.URL(`./${packageConfig.main}.json`, packageJSONUrl)))) {
+        }
+        else if (fileExists((guess = new url_1.URL(`./${packageConfig.main}.node`, packageJSONUrl)))) {
+        }
+        else if (fileExists((guess = new url_1.URL(`./${packageConfig.main}/index.js`, packageJSONUrl)))) {
+        }
+        else if (fileExists((guess = new url_1.URL(`./${packageConfig.main}/index.json`, packageJSONUrl)))) {
+        }
+        else if (fileExists((guess = new url_1.URL(`./${packageConfig.main}/index.node`, packageJSONUrl)))) {
+        }
+        else
+            guess = undefined;
+        if (guess) {
+            emitLegacyIndexDeprecation(guess, packageJSONUrl, base, packageConfig.main);
+            return guess;
+        }
+        // Fallthrough.
+    }
+    if (fileExists((guess = new url_1.URL("./index.js", packageJSONUrl)))) {
+    }
+    else if (fileExists((guess = new url_1.URL("./index.json", packageJSONUrl)))) {
+    }
+    else if (fileExists((guess = new url_1.URL("./index.node", packageJSONUrl)))) {
+    }
+    else
+        guess = undefined;
+    if (guess) {
+        emitLegacyIndexDeprecation(guess, packageJSONUrl, base, packageConfig.main);
+        return guess;
+    }
+    // Not found.
+    throw new ERR_MODULE_NOT_FOUND((0, url_1.fileURLToPath)(new url_1.URL(".", packageJSONUrl)), (0, url_1.fileURLToPath)(base));
+}
+/**
+ * @param {string | URL} path
+ * @returns {import('fs').Stats}
+ */
+const tryStatSync = (path) => statSync(path, { throwIfNoEntry: false }) ?? new Stats();
+/**
+ * @param {string | URL} url
+ * @returns {boolean}
+ */
+function fileExists(url) {
+    return statSync(url, { throwIfNoEntry: false })?.isFile() ?? false;
+}

@@ -245,7 +245,7 @@ function packageResolve(specifier, base, conditions) {
  * @param {Set<string>} conditions
  * @returns {URL}
  */
-function moduleResolve(specifier, base, conditions) {
+function defaultModuleResolve(specifier, base, conditions) {
     // Order swapped from spec for minor perf gain.
     // Ok since relative URLs cannot parse as URLs.
     let resolved;
@@ -265,7 +265,7 @@ function moduleResolve(specifier, base, conditions) {
     }
     return finalizeResolution(resolved, base);
 }
-function defaultResolveApi(specifier, context = {}, defaultResolveUnused) {
+function defaultResolveApi(specifier, context = {}, moduleResolve = defaultModuleResolve) {
     let { parentURL, conditions } = context;
     if (parentURL && policy?.manifest) {
         const redirects = policy.manifest.getDependencyMapper(parentURL);
@@ -369,6 +369,7 @@ module.exports = {
     getPackageType,
     // packageExportsResolve,
     // packageImportsResolve,
+    finalizeResolution,
 };
 // cycle
 const { defaultGetFormat } = require("../support/get_format");
