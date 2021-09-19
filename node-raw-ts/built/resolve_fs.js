@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.foo = void 0;
-const { emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, resolveAsCommonJS, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
+const { emitLegacyIndexDeprecation, getConditionsSet, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, resolveAsCommonJS, packageImportsResolve, packageExportsResolve, parsePackageName, getPackageType, } = require("./resolve_nofs");
 // "use strict";
 exports.foo = 42;
 const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONStringify, ObjectFreeze, ObjectGetOwnPropertyNames, ObjectPrototypeHasOwnProperty, 
@@ -194,16 +194,6 @@ function finalizeResolution(resolved, base) {
         throw new ERR_MODULE_NOT_FOUND(path || resolved.pathname, base && fileURLToPath(base), "module");
     }
     return resolved;
-}
-const invalidSegmentRegEx = /(^|\\|\/)(\.\.?|node_modules)(\\|\/|$)/;
-const patternRegEx = /\*/g;
-/**
- * @param {URL} url
- * @returns {PackageType}
- */
-function getPackageType(url) {
-    const packageConfig = getPackageScopeConfig(url);
-    return packageConfig.type;
 }
 /**
  * @param {string} specifier

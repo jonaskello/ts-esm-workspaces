@@ -8,6 +8,7 @@ const {
   packageImportsResolve,
   packageExportsResolve,
   parsePackageName,
+  getPackageType,
 } = require("./resolve_nofs");
 
 // "use strict";
@@ -279,18 +280,6 @@ function finalizeResolution(resolved, base) {
   }
 
   return resolved;
-}
-
-const invalidSegmentRegEx = /(^|\\|\/)(\.\.?|node_modules)(\\|\/|$)/;
-const patternRegEx = /\*/g;
-
-/**
- * @param {URL} url
- * @returns {PackageType}
- */
-function getPackageType(url) {
-  const packageConfig = getPackageScopeConfig(url);
-  return packageConfig.type;
 }
 
 /**
