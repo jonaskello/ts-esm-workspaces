@@ -4,18 +4,18 @@ const {
   ObjectCreate,
   ObjectPrototypeHasOwnProperty,
   RegExpPrototypeExec,
-} = require("./support/node-primordials");
+} = require("../support/node-primordials");
 const { extname } = require("path");
-const { getOptionValue } = require("./support/node-options");
+const { getOptionValue } = require("../support/node-options");
 
 const experimentalJsonModules = getOptionValue("--experimental-json-modules");
 const experimentalSpecifierResolution = getOptionValue(
   "--experimental-specifier-resolution"
 );
 const experimentalWasmModules = getOptionValue("--experimental-wasm-modules");
-const { getPackageType } = require("./resolve");
+const { getPackageType } = require("../built/resolve");
 const { URL, fileURLToPath } = require("url");
-const { ERR_UNKNOWN_FILE_EXTENSION } = require("./support/node-errors").codes;
+const { ERR_UNKNOWN_FILE_EXTENSION } = require("../support/node-errors").codes;
 
 const extensionFormatMap = {
   __proto__: null,

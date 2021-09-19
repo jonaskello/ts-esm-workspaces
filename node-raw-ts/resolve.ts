@@ -22,7 +22,7 @@ const {
   StringPrototypeSlice,
   StringPrototypeSplit,
   StringPrototypeStartsWith,
-} = require("./support/node-primordials");
+} = require("../support/node-primordials");
 // const internalFS = require("internal/fs/utils");
 // const { NativeModule } = require("internal/bootstrap/loaders");
 const Module = require("module");
@@ -32,7 +32,7 @@ const NativeModule = {
   },
 };
 const { realpathSync, statSync, Stats } = require("fs");
-const { getOptionValue } = require("./support/node-options");
+const { getOptionValue } = require("../support/node-options");
 // Do not eagerly grab .manifest, it may be in TDZ
 const policy = getOptionValue("--experimental-policy")
   ? require("internal/process/policy")
@@ -55,11 +55,11 @@ const {
   ERR_PACKAGE_PATH_NOT_EXPORTED,
   ERR_UNSUPPORTED_DIR_IMPORT,
   ERR_UNSUPPORTED_ESM_URL_SCHEME,
-} = require("./support/node-errors").codes;
+} = require("../support/node-errors").codes;
 // const { Module: CJSModule } = require("internal/modules/cjs/loader");
 const CJSModule = Module;
 
-const packageJsonReader = require("./support/node-package-json-reader.js");
+const packageJsonReader = require("../support/node-package-json-reader.js");
 const userConditions = getOptionValue("--conditions");
 const noAddons = getOptionValue("--no-addons");
 const addonConditions = noAddons ? [] : ["node-addons"];
@@ -1294,4 +1294,4 @@ module.exports = {
 };
 
 // cycle
-const { defaultGetFormat } = require("./get_format");
+const { defaultGetFormat } = require("../support/get_format");

@@ -4,7 +4,7 @@ const { ArrayIsArray, ArrayPrototypeJoin, ArrayPrototypeShift, JSONParse, JSONSt
 // RegExp,
 RegExpPrototypeSymbolReplace, RegExpPrototypeTest, SafeMap, SafeSet, 
 // String,
-StringPrototypeEndsWith, StringPrototypeIncludes, StringPrototypeIndexOf, StringPrototypeLastIndexOf, StringPrototypeSlice, StringPrototypeSplit, StringPrototypeStartsWith, } = require("./support/node-primordials");
+StringPrototypeEndsWith, StringPrototypeIncludes, StringPrototypeIndexOf, StringPrototypeLastIndexOf, StringPrototypeSlice, StringPrototypeSplit, StringPrototypeStartsWith, } = require("../support/node-primordials");
 // const internalFS = require("internal/fs/utils");
 // const { NativeModule } = require("internal/bootstrap/loaders");
 const Module = require("module");
@@ -14,7 +14,7 @@ const NativeModule = {
     },
 };
 const { realpathSync, statSync, Stats } = require("fs");
-const { getOptionValue } = require("./support/node-options");
+const { getOptionValue } = require("../support/node-options");
 // Do not eagerly grab .manifest, it may be in TDZ
 const policy = getOptionValue("--experimental-policy")
     ? require("internal/process/policy")
@@ -25,10 +25,10 @@ const preserveSymlinksMain = getOptionValue("--preserve-symlinks-main");
 const typeFlag = getOptionValue("--input-type");
 const pendingDeprecation = getOptionValue("--pending-deprecation");
 const { URL, pathToFileURL, fileURLToPath } = require("url");
-const { ERR_INPUT_TYPE_NOT_ALLOWED, ERR_INVALID_ARG_VALUE, ERR_INVALID_MODULE_SPECIFIER, ERR_INVALID_PACKAGE_CONFIG, ERR_INVALID_PACKAGE_TARGET, ERR_MANIFEST_DEPENDENCY_MISSING, ERR_MODULE_NOT_FOUND, ERR_PACKAGE_IMPORT_NOT_DEFINED, ERR_PACKAGE_PATH_NOT_EXPORTED, ERR_UNSUPPORTED_DIR_IMPORT, ERR_UNSUPPORTED_ESM_URL_SCHEME, } = require("./support/node-errors").codes;
+const { ERR_INPUT_TYPE_NOT_ALLOWED, ERR_INVALID_ARG_VALUE, ERR_INVALID_MODULE_SPECIFIER, ERR_INVALID_PACKAGE_CONFIG, ERR_INVALID_PACKAGE_TARGET, ERR_MANIFEST_DEPENDENCY_MISSING, ERR_MODULE_NOT_FOUND, ERR_PACKAGE_IMPORT_NOT_DEFINED, ERR_PACKAGE_PATH_NOT_EXPORTED, ERR_UNSUPPORTED_DIR_IMPORT, ERR_UNSUPPORTED_ESM_URL_SCHEME, } = require("../support/node-errors").codes;
 // const { Module: CJSModule } = require("internal/modules/cjs/loader");
 const CJSModule = Module;
-const packageJsonReader = require("./support/node-package-json-reader.js");
+const packageJsonReader = require("../support/node-package-json-reader.js");
 const userConditions = getOptionValue("--conditions");
 const noAddons = getOptionValue("--no-addons");
 const addonConditions = noAddons ? [] : ["node-addons"];
@@ -946,4 +946,4 @@ module.exports = {
     packageImportsResolve,
 };
 // cycle
-const { defaultGetFormat } = require("./get_format");
+const { defaultGetFormat } = require("../support/get_format");

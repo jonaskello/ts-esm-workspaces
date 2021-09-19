@@ -1,6 +1,7 @@
 {
   "include": ["./resolve.ts"],
   "compilerOptions": {
+    "outDir": "./built",
     "noErrorTruncation": true,
 
     "lib": ["es2015", "es2017.object", "esnext.asynciterable"],
@@ -12,13 +13,9 @@
     "declarationMap": false,
     "inlineSourceMap": false,
     "esModuleInterop": true,
-    "jsx": "react",
-    "newLine": "LF",
-    "noEmitOnError": false,
-    "noFallthroughCasesInSwitch": true,
+    "noEmitOnError": true,
     "noImplicitAny": false,
     "noImplicitReturns": false,
-    "noImplicitThis": true,
     "strict": true,
     "skipLibCheck": true
   }
