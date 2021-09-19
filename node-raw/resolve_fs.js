@@ -55,7 +55,7 @@ const {
   ERR_PACKAGE_PATH_NOT_EXPORTED,
   ERR_UNSUPPORTED_DIR_IMPORT,
   ERR_UNSUPPORTED_ESM_URL_SCHEME,
-} = require("./suppoer/node-errors").codes;
+} = require("./support/node-errors").codes;
 // const { Module: CJSModule } = require("internal/modules/cjs/loader");
 const CJSModule = Module;
 

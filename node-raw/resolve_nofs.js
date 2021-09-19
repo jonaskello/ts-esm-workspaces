@@ -27,7 +27,7 @@ const {
   ERR_INVALID_PACKAGE_TARGET,
   ERR_PACKAGE_IMPORT_NOT_DEFINED,
   ERR_PACKAGE_PATH_NOT_EXPORTED,
-} = require("./suppoer/node-errors").codes;
+} = require("./support/node-errors").codes;
 
 const packageJsonReader = require("./support/node-package-json-reader.js");
 const userConditions = getOptionValue("--conditions");

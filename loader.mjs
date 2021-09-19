@@ -2,10 +2,12 @@ import { URL, pathToFileURL, fileURLToPath } from "url";
 import { transformSync } from "esbuild";
 import fs from "fs";
 
+import { defaultResolve } from "./node-raw/resolve_fs";
+
 const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
 
-export function resolve(specifier, context, defaultResolve) {
+export function resolve(specifier, context) {
   console.log("RESOLVE: START");
 
   const { parentURL = baseURL } = context;

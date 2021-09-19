@@ -4,7 +4,7 @@ const {
   ObjectCreate,
   ObjectPrototypeHasOwnProperty,
   RegExpPrototypeExec,
-} = require("./supoort/node-primordials");
+} = require("./support/node-primordials");
 const { extname } = require("path");
 const { getOptionValue } = require("./support/node-options");
 
