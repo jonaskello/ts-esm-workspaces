@@ -18,6 +18,9 @@ const {
   ERR_MODULE_NOT_FOUND,
 } = require("./resolve_fs");
 
+// const extensionsRegex = /\.ts$/;
+// const excludeRegex = /^\w+:/;
+
 // export function resolve(specifier, context, defaultResolve) {
 //   const { parentURL = baseURL } = context;
 
