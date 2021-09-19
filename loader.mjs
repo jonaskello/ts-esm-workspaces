@@ -6,6 +6,8 @@ const baseURL = pathToFileURL(`${process.cwd()}/`).href;
 const isWindows = process.platform === "win32";
 
 export function resolve(specifier, context, defaultResolve) {
+  console.log("RESOLVE: START");
+
   const { parentURL = baseURL } = context;
 
   // If file ends in .ts
@@ -21,17 +23,20 @@ export function resolve(specifier, context, defaultResolve) {
     let url = new URL(specifier + ".ts", parentURL).href;
     const path = fileURLToPath(url);
     if (fs.existsSync(path)) {
+      console.log("RESOLVE: RETURN");
       return { url };
     }
   }
 
-  console.log("forwarding", specifier);
+  console.log("RESOLVE: FORWARD", specifier);
 
   // Let Node.js handle all other specifiers.
   return defaultResolve(specifier, context, defaultResolve);
 }
 
 export async function load(url, context, defaultLoad) {
+  console.log("LOAD: START");
+
   // Return transpiled source if typescript file
   if (isTypescriptFile(url)) {
     // Call defaultLoad to get the source
@@ -44,6 +49,8 @@ export async function load(url, context, defaultLoad) {
     const source = transpileTypescript(url, rawSource, "esm");
     return { format, source };
   }
+
+  console.log("LOAD: FORWARD");
 
   // Let Node.js load it
   return defaultLoad(url, context);
@@ -93,3 +100,20 @@ function getTypescriptModuleFormat() {
 
   return "module";
 }
+
+/*
+
+We always start with a typescript file (foo.ts) and a tsconfig.json.
+
+We only need to handle imports with relative or bare specifiers.
+
+* The relative specifier can be extensionless or have a .js extension
+* The bare specifier could resolve to an extensionless or a .js file
+
+When something resolves to a .js file, we need to determine if that .js file is part of the current compilation.
+The .js may not exist in the filesystem becuase tsc may have not been run yet.
+If a .js file is part of the current compilation, we need to backtrack to find the .ts file that generated it and load that instead
+
+So instead of just chaning the extension from .js to .ts, or just adding .ts to the exensionless specifier
+
+*/
