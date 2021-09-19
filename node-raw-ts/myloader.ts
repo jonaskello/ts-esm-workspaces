@@ -25,29 +25,7 @@ const isWindows = process.platform === "win32";
 export function resolve(specifier, context) {
   console.log("RESOLVE: START");
 
-  // const { parentURL = baseURL } = context;
-
-  // // If file ends in .ts
-  // if (isTypescriptFile(specifier)) {
-  //   const url = new URL(specifier, parentURL).href;
-  //   return { url };
-  // }
-
-  // // ignore `data:` and `node:` prefix etc.
-  // const excludeRegex = /^\w+:/;
-  // if (!excludeRegex.test(specifier)) {
-  //   // Try to add `.ts` extension and resolve
-  //   let url = new URL(specifier + ".ts", parentURL).href;
-  //   const path = fileURLToPath(url);
-  //   if (fs.existsSync(path)) {
-  //     console.log("RESOLVE: RETURN");
-  //     return { url };
-  //   }
-  // }
-
-  // console.log("RESOLVE: FORWARD", specifier);
-
-  // Let Node.js handle all other specifiers.
+  // Use default but with our own moduleResolve
   return defaultResolveApi(specifier, context, myModuleResolve);
 }
 
@@ -142,15 +120,17 @@ So instead of just chaning the extension from .js to .ts, or just adding .ts to 
  * @returns {URL}
  */
 function myModuleResolve(specifier, base, conditions) {
-  console.log("myModuleResolvemyModuleResolvemyModuleResolvemyModuleResolve");
+  console.log("myModuleResolve: START");
 
   // Order swapped from spec for minor perf gain.
   // Ok since relative URLs cannot parse as URLs.
   let resolved;
   if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
+    console.log("myModuleResolve: resolveFilePath");
     // resolved = new URL(specifier, base);
-    return resolveFilePath(specifier, base);
+    resolved = resolveFilePath(specifier, base);
   } else if (specifier[0] === "#") {
+    console.log("myModuleResolve: packageImportsResolve");
     ({ resolved } = packageImportsResolve(
       packageResolve,
       specifier,
@@ -158,12 +138,16 @@ function myModuleResolve(specifier, base, conditions) {
       conditions
     )!);
   } else {
+    console.log("myModuleResolve: else");
     try {
       resolved = new URL(specifier);
     } catch {
+      console.log("myModuleResolve: packageResolve");
       resolved = packageResolve(specifier, base, conditions);
     }
   }
+  console.log("myModuleResolve: END", resolved.href);
+
   return finalizeResolution(resolved, base);
 }
 
@@ -187,18 +171,21 @@ function resolveFilePath(specifier, base) {
 }
 
 /**
+ * This function resolves bare specifiers that refers to packages (not node:, data: bare specifiers)
  * @param {string} specifier
  * @param {string | URL | undefined} base
  * @param {Set<string>} conditions
  * @returns {URL}
  */
 function packageResolve(specifier, base, conditions) {
+  // Parse the specifier as a package name (package or @org/package) and separate out the sub-path
   const { packageName, packageSubpath, isScoped } = parsePackageName(
     specifier,
     base
   );
 
   // ResolveSelf
+  // Check if the specifier resolves to the same package we are resolving from
   const selfResolved = resolveSelf(
     base,
     packageName,
@@ -207,8 +194,10 @@ function packageResolve(specifier, base, conditions) {
   );
   if (selfResolved) return selfResolved;
 
+  // Find package.json by ascending the file system
   const packageJsonMatch = findPackageJson(packageName, base, isScoped);
 
+  // If package.json was found, resolve from it's exports or main field
   if (packageJsonMatch) {
     const [packageJSONUrl, packageJSONPath] = packageJsonMatch;
     const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
@@ -264,6 +253,7 @@ function findPackageJson(packageName, base, isScoped) {
 }
 
 // This could probably be moved to a built-in API
+// However it needs packageResolve since it calls into packageExportsResolve()
 function resolveSelf(base, packageName, packageSubpath, conditions) {
   const packageConfig = getPackageScopeConfig(base);
   if (packageConfig.exists) {
