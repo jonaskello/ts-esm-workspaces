@@ -10,13 +10,10 @@ const {
   packageImportsResolve,
   packageExportsResolve,
   parsePackageName,
+  getConditionsSet,
 } = require("./resolve_nofs");
 
-const {
-  defaultResolveApi,
-  finalizeResolution,
-  ERR_MODULE_NOT_FOUND,
-} = require("./resolve_fs");
+const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
 
 // const extensionsRegex = /\.ts$/;
 // const excludeRegex = /^\w+:/;
@@ -55,8 +52,16 @@ export function resolve(specifier, context, defaultResolve) {
     return defaultResolve(specifier, context, defaultResolve);
   }
 
-  // Use default but with our own moduleResolve
-  return defaultResolveApi(specifier, context, myModuleResolve);
+  let { parentURL, conditions } = context;
+  conditions = getConditionsSet(conditions);
+  let url;
+  try {
+    url = myModuleResolve(specifier, parentURL, conditions);
+  } catch (error: any) {
+    throw error;
+  }
+
+  return { url: `${url}` };
 }
 
 /**

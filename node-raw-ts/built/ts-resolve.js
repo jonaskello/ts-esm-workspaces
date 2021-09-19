@@ -7,8 +7,8 @@ exports.resolve = void 0;
 const url_1 = require("url");
 const fs_1 = __importDefault(require("fs"));
 const { statSync, Stats } = require("fs");
-const { emitLegacyIndexDeprecation, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
-const { defaultResolveApi, finalizeResolution, ERR_MODULE_NOT_FOUND, } = require("./resolve_fs");
+const { emitLegacyIndexDeprecation, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, packageImportsResolve, packageExportsResolve, parsePackageName, getConditionsSet, } = require("./resolve_nofs");
+const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
 // const extensionsRegex = /\.ts$/;
 // const excludeRegex = /^\w+:/;
 // export function resolve(specifier, context, defaultResolve) {
@@ -38,8 +38,16 @@ function resolve(specifier, context, defaultResolve) {
     if (excludeRegex.test(specifier)) {
         return defaultResolve(specifier, context, defaultResolve);
     }
-    // Use default but with our own moduleResolve
-    return defaultResolveApi(specifier, context, myModuleResolve);
+    let { parentURL, conditions } = context;
+    conditions = getConditionsSet(conditions);
+    let url;
+    try {
+        url = myModuleResolve(specifier, parentURL, conditions);
+    }
+    catch (error) {
+        throw error;
+    }
+    return { url: `${url}` };
 }
 exports.resolve = resolve;
 /**
