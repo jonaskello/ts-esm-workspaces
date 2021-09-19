@@ -18,6 +18,31 @@ const {
   ERR_MODULE_NOT_FOUND,
 } = require("./resolve_fs");
 
+// export function resolve(specifier, context, defaultResolve) {
+//   const { parentURL = baseURL } = context;
+
+//   // If file ends in .ts
+//   if (extensionsRegex.test(specifier)) {
+//     const url = new URL(specifier, parentURL).href;
+//     return { url };
+//   }
+
+//   // ignore `data:` and `node:` prefix etc.
+//   if (!excludeRegex.test(specifier)) {
+//     // Try to add `.ts` extension and resolve
+//     let url = new URL(specifier + ".ts", parentURL).href;
+//     const path = fileURLToPath(url);
+//     if (fs.existsSync(path)) {
+//       return { url };
+//     }
+//   }
+
+//   console.log("forwarding", specifier);
+
+//   // Let Node.js handle all other specifiers.
+//   return defaultResolve(specifier, context, defaultResolve);
+// }
+
 export function resolve(specifier, context) {
   console.log("RESOLVE: START");
 
