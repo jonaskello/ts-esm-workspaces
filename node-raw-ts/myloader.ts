@@ -127,8 +127,8 @@ function myModuleResolve(specifier, base, conditions) {
   let resolved;
   if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
     console.log("myModuleResolve: resolveFilePath");
-    // resolved = new URL(specifier, base);
-    resolved = resolveFilePath(specifier, base);
+    resolved = new URL(specifier, base);
+    // resolved = resolveFilePath(specifier, base);
   } else if (specifier[0] === "#") {
     console.log("myModuleResolve: packageImportsResolve");
     ({ resolved } = packageImportsResolve(
@@ -148,26 +148,39 @@ function myModuleResolve(specifier, base, conditions) {
   }
   console.log("myModuleResolve: END", resolved.href);
 
+  // Now we should have resolved to an URL with file-path (eg. foo.js),
+  // It could also be to resolved to an extensionless file at this point...
+  // We should check if
+  // the resolved file is in the output space of the tsconfig used.
+  // If it is we need to map it back to the typescript file that will compile to the resolved file
+  // and resolve to that file instead
+  resolved = translateJsUrlBackToTypescriptUrl(resolved);
+
+  // finalizeResolution checks for old file endings....
   return finalizeResolution(resolved, base);
 }
 
-function resolveFilePath(specifier, base) {
+/**
+ * We get an url to a javascript file and should try to back-track
+ * to the typescript file that would compile to that javascript file.
+ * @param url
+ * @returns url
+ */
+function translateJsUrlBackToTypescriptUrl(url) {
   // If file ends in .ts use it as-is
-  if (isTypescriptFile(specifier)) {
-    const url = new URL(specifier, base);
-    console.log("RESOLVE: RETURN", url.href);
+  if (isTypescriptFile(url.href)) {
     return url;
   }
 
   // Try to add `.ts` extension and resolve
-  let url = new URL(specifier + ".ts", base);
-  const path = fileURLToPath(url);
+  const path = fileURLToPath(url) + ".ts";
+  console.log("translateJsUrlBackToTypescriptUrl pathpathpath", path);
   if (fs.existsSync(path)) {
     console.log("RESOLVE: RETURN", url.href);
-    return url;
+    return pathToFileURL(path);
   }
 
-  return new URL(specifier, base);
+  return url;
 }
 
 /**
