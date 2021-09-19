@@ -9,8 +9,35 @@ const fs_1 = __importDefault(require("fs"));
 const { statSync, Stats } = require("fs");
 const { emitLegacyIndexDeprecation, getPackageConfig, getPackageScopeConfig, shouldBeTreatedAsRelativeOrAbsolutePath, packageImportsResolve, packageExportsResolve, parsePackageName, } = require("./resolve_nofs");
 const { defaultResolveApi, finalizeResolution, ERR_MODULE_NOT_FOUND, } = require("./resolve_fs");
-function resolve(specifier, context) {
+// const extensionsRegex = /\.ts$/;
+// const excludeRegex = /^\w+:/;
+// export function resolve(specifier, context, defaultResolve) {
+//   const { parentURL = baseURL } = context;
+//   // If file ends in .ts
+//   if (extensionsRegex.test(specifier)) {
+//     const url = new URL(specifier, parentURL).href;
+//     return { url };
+//   }
+//   // ignore `data:` and `node:` prefix etc.
+//   if (!excludeRegex.test(specifier)) {
+//     // Try to add `.ts` extension and resolve
+//     let url = new URL(specifier + ".ts", parentURL).href;
+//     const path = fileURLToPath(url);
+//     if (fs.existsSync(path)) {
+//       return { url };
+//     }
+//   }
+//   console.log("forwarding", specifier);
+//   // Let Node.js handle all other specifiers.
+//   return defaultResolve(specifier, context, defaultResolve);
+// }
+function resolve(specifier, context, defaultResolve) {
     console.log("RESOLVE: START");
+    // Let node handle `data:` and `node:` prefix etc.
+    const excludeRegex = /^\w+:/;
+    if (excludeRegex.test(specifier)) {
+        return defaultResolve(specifier, context, defaultResolve);
+    }
     // Use default but with our own moduleResolve
     return defaultResolveApi(specifier, context, myModuleResolve);
 }

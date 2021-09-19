@@ -46,8 +46,14 @@ const {
 //   return defaultResolve(specifier, context, defaultResolve);
 // }
 
-export function resolve(specifier, context) {
+export function resolve(specifier, context, defaultResolve) {
   console.log("RESOLVE: START");
+
+  // Let node handle `data:` and `node:` prefix etc.
+  const excludeRegex = /^\w+:/;
+  if (excludeRegex.test(specifier)) {
+    return defaultResolve(specifier, context, defaultResolve);
+  }
 
   // Use default but with our own moduleResolve
   return defaultResolveApi(specifier, context, myModuleResolve);
