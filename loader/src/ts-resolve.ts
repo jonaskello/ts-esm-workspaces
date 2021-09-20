@@ -18,6 +18,7 @@ const {
 const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
 
 let tsconfigMap: Map<string, Tsconfig> | undefined = undefined;
+let absoluteOutDirToTsConfigMap: Map<string, string> | undefined = undefined;
 
 export function resolve(specifier, context, defaultResolve) {
   console.log("RESOLVE: START");
@@ -30,10 +31,22 @@ export function resolve(specifier, context, defaultResolve) {
     return defaultResolve(specifier, context, defaultResolve);
   }
 
-  // Build tsconfig if we don't have it
+  // Build tsconfig map if we don't have it
   if (tsconfigMap === undefined) {
     tsconfigMap = loadTsConfigAndResolveReferences();
+    absoluteOutDirToTsConfigMap = new Map();
+    for (const [k, v] of tsconfigMap.entries()) {
+      if (v.compilerOptions?.outDir === undefined) {
+        throw new Error("Outdir must be defined for now...");
+      }
+      const absoluteOutDir = path.resolve(
+        path.dirname(k),
+        v.compilerOptions.outDir
+      );
+      absoluteOutDirToTsConfigMap.set(absoluteOutDir, k);
+    }
     console.log("tsconfigMap", tsconfigMap);
+    console.log("absoluteOutDirToTsConfigMap", absoluteOutDirToTsConfigMap);
   }
 
   // If file ends in .ts then just return it
