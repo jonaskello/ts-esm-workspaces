@@ -1,12 +1,7 @@
 import { URL, pathToFileURL, fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
-import {
-  loadTsconfig,
-  resolveConfigPath,
-  Tsconfig,
-  tsConfigLoader,
-} from "./tsconfig-loader";
+import { Tsconfig, loadTsConfigAndResolveReferences } from "./tsconfig-loader";
 const { statSync, Stats } = require("fs");
 
 const {
@@ -22,21 +17,23 @@ const {
 
 const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
 
+let tsconfigMap: Map<string, Tsconfig> | undefined = undefined;
+
 export function resolve(specifier, context, defaultResolve) {
   console.log("RESOLVE: START");
 
   let { parentURL, conditions } = context;
 
-  // Get tsconfig only if main entrypoint
-  if (parentURL === undefined) {
-    const tsconfigMap = loadTsConfigAndResolveReferences();
-    console.log("tsconfigMap", tsconfigMap);
-  }
-
   // Let node handle `data:` and `node:` prefix etc.
   const excludeRegex = /^\w+:/;
   if (excludeRegex.test(specifier)) {
     return defaultResolve(specifier, context, defaultResolve);
+  }
+
+  // Build tsconfig if we don't have it
+  if (tsconfigMap === undefined) {
+    tsconfigMap = loadTsConfigAndResolveReferences();
+    console.log("tsconfigMap", tsconfigMap);
   }
 
   // If file ends in .ts then just return it
@@ -51,46 +48,6 @@ export function resolve(specifier, context, defaultResolve) {
   const url = myModuleResolve(specifier, parentURL, conditions);
 
   return { url: `${url}` };
-}
-
-function loadTsConfigAndResolveReferences(): Map<string, Tsconfig> {
-  let cwd = process.cwd();
-  const entryTsConfig = process.env["TS_NODE_PROJECT"];
-  if (!entryTsConfig) {
-    throw new Error("TS_NODE_PROJECT not set.");
-  }
-  const tsconfigMap = new Map();
-  loadTsConfigAndResolveReferencesRecursive(
-    cwd,
-    [{ path: entryTsConfig }],
-    tsconfigMap
-  );
-  return tsconfigMap;
-}
-
-function loadTsConfigAndResolveReferencesRecursive(
-  cwd: string,
-  refs: Array<{ path: string }>,
-  tsconfigMap: Map<string, Tsconfig>
-): Map<string, Tsconfig> {
-  for (const ref of refs) {
-    console.log("resolveConfigPath", cwd, ref.path);
-    let fullPath = path.join(cwd, ref.path);
-    if (fs.lstatSync(fullPath).isDirectory()) {
-      fullPath = path.join(fullPath, "tsconfig.json");
-    }
-    const tsconfig = loadTsconfig(fullPath);
-    if (!tsconfig) {
-      throw new Error("Could not find tsconfig ref.");
-    }
-    tsconfigMap.set(fullPath, tsconfig);
-    loadTsConfigAndResolveReferencesRecursive(
-      path.dirname(fullPath),
-      tsconfig?.references ?? [],
-      tsconfigMap
-    );
-  }
-  return tsconfigMap;
 }
 
 /**

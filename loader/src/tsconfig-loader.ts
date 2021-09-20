@@ -167,3 +167,43 @@ export function loadTsconfig(
   }
   return config;
 }
+
+export function loadTsConfigAndResolveReferences(): Map<string, Tsconfig> {
+  let cwd = process.cwd();
+  const entryTsConfig = process.env["TS_NODE_PROJECT"];
+  if (!entryTsConfig) {
+    throw new Error("TS_NODE_PROJECT not set.");
+  }
+  const tsconfigMap = new Map();
+  loadTsConfigAndResolveReferencesRecursive(
+    cwd,
+    [{ path: entryTsConfig }],
+    tsconfigMap
+  );
+  return tsconfigMap;
+}
+
+function loadTsConfigAndResolveReferencesRecursive(
+  cwd: string,
+  refs: Array<{ path: string }>,
+  tsconfigMap: Map<string, Tsconfig>
+): Map<string, Tsconfig> {
+  for (const ref of refs) {
+    console.log("resolveConfigPath", cwd, ref.path);
+    let fullPath = path.join(cwd, ref.path);
+    if (fs.lstatSync(fullPath).isDirectory()) {
+      fullPath = path.join(fullPath, "tsconfig.json");
+    }
+    const tsconfig = loadTsconfig(fullPath);
+    if (!tsconfig) {
+      throw new Error("Could not find tsconfig ref.");
+    }
+    tsconfigMap.set(fullPath, tsconfig);
+    loadTsConfigAndResolveReferencesRecursive(
+      path.dirname(fullPath),
+      tsconfig?.references ?? [],
+      tsconfigMap
+    );
+  }
+  return tsconfigMap;
+}
