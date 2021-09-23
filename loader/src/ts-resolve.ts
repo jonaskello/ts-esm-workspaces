@@ -102,6 +102,10 @@ function myModuleResolve(specifier, base, conditions) {
   }
   console.log("myModuleResolve: END", resolved.href);
 
+  // Check which tsconfig this file belongs to and translate the path....
+  for (const [outDir, tsconfig] of absoluteOutDirToTsConfigMap!.entries()) {
+  }
+
   // Now we should have resolved to an URL with file-path (eg. foo.js),
   // It could also be to resolved to an extensionless file at this point...
   // We should check if
