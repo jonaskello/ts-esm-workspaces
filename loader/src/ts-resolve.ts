@@ -175,6 +175,10 @@ function myModuleResolve(
     resolved = probeForLegacyIndex(resolved);
   }
 
+  if (resolved === undefined) {
+    return undefined;
+  }
+
   // Check which tsconfig this file belongs to and translate the path....
   // for (const [outDir, tsconfig] of absoluteOutDirToTsConfigMap!.entries()) {
   // }
@@ -189,7 +193,9 @@ function myModuleResolve(
   // Cannot be a .ts file since that case only exists for the entry file and is handled directly in resolve()
   // Do we want to support extensionless files? In that case we need to check if it is
   // a directory or file... Typescript always outputs .js files so we could just add that?
+
   resolved = translateJsUrlBackToTypescriptUrl(resolved);
+  // resolved = probeForTsFileInSamePathAsJsFile(resolved);
 
   // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
   const finalizedUrl = finalizeResolution(resolved, base);
