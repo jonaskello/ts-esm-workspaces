@@ -51,7 +51,11 @@ export function resolve(
 ): ResolveReturn {
   console.log("RESOLVE: START");
 
+  // parentURL is the URL returned by previous resolve, so it is not the specifier that did the import but the resolved specifier
+  // If a .ts file was resolved for a import xxxx from ./foo.js file, then ./foo.ts file will be the parentURL, not foo.js
+  // This means abs/relative imports never need mapping of path from output to input
   let { parentURL, conditions } = context;
+  console.log("RESOLVE: parentURL", parentURL);
 
   // Let node handle `data:` and `node:` prefix etc.
   const excludeRegex = /^\w+:/;
