@@ -148,36 +148,43 @@ function myModuleResolve(
   }
 
   // Resolve bare specifiers
-  let resolved: URL | undefined;
+  let possibleUrls: ReadonlyArray<URL>;
   if (specifier[0] === "#") {
     console.log("myModuleResolve: packageImportsResolve");
-    ({ resolved } = packageImportsResolve(
+    const { resolved } = packageImportsResolve(
       packageResolve,
       specifier,
       base,
       conditions
-    )!);
+    )!;
+    possibleUrls = [resolved];
   } else {
     console.log("myModuleResolve: else");
     try {
-      resolved = new URL(specifier);
+      possibleUrls = [new URL(specifier)];
     } catch {
       console.log("myModuleResolve: packageResolve");
-      resolved = packageResolve(specifier, base, conditions);
-      console.log("myModuleResolve: packageResolve RETURN", resolved?.href);
+      possibleUrls = packageResolve(specifier, base, conditions);
+      console.log(
+        "myModuleResolve: packageResolve RETURN",
+        Array.isArray(possibleUrls)
+      );
     }
   }
-  console.log("myModuleResolve: END", resolved?.href);
+  console.log("myModuleResolve: END");
 
-  // At this point the bare specifier is resolved to one or more possible JS files
+  // // At this point the bare specifier is resolved to one or more possible JS files
+  // if (!Array.isArray(possibleUrls)) {
+  //   resolved = [resolved];
+  // }
 
-  if (Array.isArray(resolved)) {
-    resolved = probeForLegacyIndex(resolved);
-  }
+  // if (Array.isArray(resolved)) {
+  //   resolved = probeForLegacyIndex(resolved);
+  // }
 
-  if (resolved === undefined) {
-    return undefined;
-  }
+  // if (possibleUrls === undefined || possibleUrls.length === 0) {
+  //   return undefined;
+  // }
 
   // Check which tsconfig this file belongs to and translate the path....
   // for (const [outDir, tsconfig] of absoluteOutDirToTsConfigMap!.entries()) {
@@ -195,16 +202,16 @@ function myModuleResolve(
   // a directory or file... Typescript always outputs .js files so we could just add that?
 
   // const resolved2 = translateJsUrlBackToTypescriptUrl(resolved);
-  // console.log("bare specifier resolved2", resolved2);
-  resolved = probeForTsFileInSamePathAsJsFile(resolved);
-  if (resolved === undefined) {
-    return undefined;
+  console.log("bare specifiier possibleUrls", possibleUrls.length);
+  for (const possibleUrl of possibleUrls) {
+    const tsFile = probeForTsFileInSamePathAsJsFile(possibleUrl);
+    if (tsFile !== undefined) {
+      // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
+      const finalizedUrl = finalizeResolution(tsFile, base);
+      return [finalizedUrl, "typescript"];
+    }
   }
-  console.log("bare specifier resolved", resolved);
-
-  // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
-  const finalizedUrl = finalizeResolution(resolved, base);
-  return [finalizedUrl, "typescript"];
+  return undefined;
 }
 
 function getTsConfigAbsPathForOutFile(
@@ -265,7 +272,7 @@ function packageResolve(
   specifier: string,
   base: string | URL | undefined,
   conditions: Set<string>
-) {
+): ReadonlyArray<URL> {
   // Parse the specifier as a package name (package or @org/package) and separate out the sub-path
   const { packageName, packageSubpath, isScoped } = parsePackageName(
     specifier,
@@ -280,7 +287,7 @@ function packageResolve(
     packageSubpath,
     conditions
   );
-  if (selfResolved) return selfResolved;
+  if (selfResolved) return [selfResolved];
 
   // Find package.json by ascending the file system
   const packageJsonMatch = findPackageJson(packageName, base, isScoped);
@@ -289,8 +296,8 @@ function packageResolve(
   if (packageJsonMatch) {
     const [packageJSONUrl, packageJSONPath] = packageJsonMatch;
     const packageConfig = getPackageConfig(packageJSONPath, specifier, base);
-    if (packageConfig.exports !== undefined && packageConfig.exports !== null)
-      return packageExportsResolve(
+    if (packageConfig.exports !== undefined && packageConfig.exports !== null) {
+      const per = packageExportsResolve(
         packageResolve,
         packageJSONUrl,
         packageSubpath,
@@ -298,10 +305,12 @@ function packageResolve(
         base,
         conditions
       ).resolved;
+      return per ? [per] : [];
+    }
     if (packageSubpath === ".")
       // return legacyMainResolve(packageJSONUrl, packageConfig, base);
       return legacyMainResolve2(packageJSONUrl, packageConfig);
-    return new URL(packageSubpath, packageJSONUrl);
+    return [new URL(packageSubpath, packageJSONUrl)];
   }
 
   // eslint can't handle the above code.
@@ -474,8 +483,8 @@ function probeForLegacyIndex(urls) {
  * @param {string | URL | undefined} base
  * @returns {URL}
  */
-function legacyMainResolve2(packageJSONUrl, packageConfig) {
-  const guess: any = [];
+function legacyMainResolve2(packageJSONUrl, packageConfig): ReadonlyArray<URL> {
+  const guess: Array<URL> = [];
   if (packageConfig.main !== undefined) {
     guess.push(
       ...[
