@@ -280,7 +280,8 @@ function convertTypescriptOutUrlToSourceUrl(
 
 /**
  * Convert a path that contains symlinks to a real path without requiring the full path to exist.
- * Any parts of the path that exists and are symlinks will be converted.
+ * If a starting part of the path exists, it will be converted to a real path,
+ * and then the rest of the path (the non-existing part) will be added to the end.
  */
 function realPathOfSymlinkedUrl(inputUrl: URL): URL {
   const pathString = fileURLToPath(inputUrl);
