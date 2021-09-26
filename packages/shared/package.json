@@ -2,7 +2,7 @@
   "private": true,
   "name": "@app/shared",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "lib/index.js",
   "type": "module",
   "license": "MIT"
 }

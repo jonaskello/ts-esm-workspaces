@@ -204,26 +204,114 @@ function myModuleResolve(
   // const resolved2 = translateJsUrlBackToTypescriptUrl(resolved);
   console.log("bare specifiier possibleUrls", possibleUrls.length);
   for (const possibleUrl of possibleUrls) {
-    const tsFile = probeForTsFileInSamePathAsJsFile(possibleUrl);
-    if (tsFile !== undefined) {
-      // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
-      const finalizedUrl = finalizeResolution(tsFile, base);
-      return [finalizedUrl, "typescript"];
+    // Convert path (useful if the specifier was a reference to a package which is in the same composite project)
+    // If the resolution resulted in a symlink then use the real path instead
+    const realPossibleUrl = realPathOfSymlinkedUrl(possibleUrl);
+    // const tsConfigAbsPath = getTsConfigAbsPathForOutFile(
+    //   tsConfigInfo,
+    //   realPossibleUrl
+    // );
+    // console.log("theTsConfig", tsConfigAbsPath);
+    // if (tsConfigAbsPath !== undefined) {
+    const possibleSourceUrl = convertTypescriptOutUrlToSourceUrl(
+      tsConfigInfo,
+      realPossibleUrl
+    );
+    if (possibleSourceUrl !== undefined) {
+      //
+      const tsFile = probeForTsFileInSamePathAsJsFile(possibleSourceUrl);
+      if (tsFile !== undefined) {
+        console.log("---------> RESOLVED BARE SPECIFIER: ", tsFile.href);
+        // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
+        const finalizedUrl = finalizeResolution(tsFile, base);
+        return [finalizedUrl, "typescript"];
+      }
     }
+    // }
   }
   return undefined;
 }
 
-function getTsConfigAbsPathForOutFile(
+/**
+ * Given an URL that typescript will emit a JS file to when compiled, convert that back to the URL
+ * for the source TS file.
+ */
+function convertTypescriptOutUrlToSourceUrl(
   tsConfigInfo: TsConfigInfo,
-  fileUrl: URL
-): string | undefined {
-  const filePath = fileURLToPath(fileUrl);
-  for (const key of tsConfigInfo.absOutDirToTsConfig.keys()) {
-    if (filePath.startsWith(key)) return key;
+  outFileUrl: URL
+): URL | undefined {
+  const outFilePath = fileURLToPath(outFileUrl);
+  let absOutDir: string | undefined = undefined;
+  let tsConfigAbsPath: string | undefined = undefined;
+  let absRootDir: string | undefined = undefined;
+  for (const [key, value] of tsConfigInfo.absOutDirToTsConfig.entries()) {
+    if (outFilePath.startsWith(key)) {
+      absOutDir = key;
+      tsConfigAbsPath = value;
+      const tc = tsConfigInfo.tsconfigMap.get(tsConfigAbsPath);
+      absRootDir = path.join(
+        path.dirname(tsConfigAbsPath),
+        tc?.compilerOptions?.rootDir ?? ""
+      );
+      console.log("-----> checking for root dir", absRootDir);
+      break;
+    }
+  }
+  if (
+    absOutDir === undefined ||
+    tsConfigAbsPath === undefined ||
+    absRootDir === undefined
+  ) {
+    return undefined;
+  }
+
+  if (absOutDir) {
+    // const outDir = tsConfigInfo.absOutDirToTsConfig[absOutDir];
+    if (!outFilePath.startsWith(absOutDir)) {
+      throw new Error("Mismatch in paths");
+    }
+    const remaining = outFilePath.substr(absOutDir.length);
+    const convertedPath = path.join(absRootDir, remaining);
+    console.log("---->CONVERTED PATH", convertedPath);
+    return pathToFileURL(convertedPath);
   }
   return undefined;
 }
+
+/**
+ * Convert a path that contains symlinks to a real path without requiring the full path to exist.
+ * Any parts of the path that exists and are symlinks will be converted.
+ */
+function realPathOfSymlinkedUrl(inputUrl: URL): URL {
+  const pathString = fileURLToPath(inputUrl);
+  // console.log("realPathOfSymlinkedUrl--START", pathString);
+  const pathParts = pathString.substr(1).split(path.sep);
+  let existingRealPath = "/";
+  let i: number;
+  for (i = 0; i < pathParts.length; i++) {
+    const pp = pathParts[i];
+    try {
+      const checkPath = path.join(existingRealPath, pp);
+      existingRealPath = fs.realpathSync(checkPath);
+    } catch (e) {
+      break;
+    }
+  }
+  const fullPath = path.join(existingRealPath, ...pathParts.slice(i));
+  // console.log("realPathOfSymlinkedUrl--END", fullPath);
+  return pathToFileURL(fullPath);
+}
+
+// function getTsConfigAbsPathForOutFile(
+//   tsConfigInfo: TsConfigInfo,
+//   fileUrl: URL
+// ): string | undefined {
+//   const filePath = fileURLToPath(fileUrl);
+//   for (const key of tsConfigInfo.absOutDirToTsConfig.keys()) {
+//     if (filePath.startsWith(key)) return key;
+//   }
+//   return undefined;
+// }
 
 /**
  * Given a file with a javascript extension, probe for a file with
@@ -241,24 +329,6 @@ function probeForTsFileInSamePathAsJsFile(jsFileUrl: URL): URL | undefined {
   if (fileExists(extensionless + ".tsx")) {
     return pathToFileURL(extensionless + ".tsx");
   }
-}
-
-/**
- * We get an url to a javascript file and should try to back-track
- * to the typescript file that would compile to that javascript file.
- * @param url
- * @returns url
- */
-function translateJsUrlBackToTypescriptUrl(url) {
-  // Try to add `.ts` extension and resolve
-  const path = fileURLToPath(url) + ".ts";
-  console.log("translateJsUrlBackToTypescriptUrl pathpathpath", path);
-  if (fs.existsSync(path)) {
-    console.log("RESOLVE: RETURN", url.href);
-    return pathToFileURL(path);
-  }
-
-  return url;
 }
 
 /**
@@ -521,7 +591,11 @@ const tryStatSync = (path) =>
  * @returns {boolean}
  */
 function fileExists(url) {
-  return statSync(url, { throwIfNoEntry: false })?.isFile() ?? false;
+  try {
+    return statSync(url, { throwIfNoEntry: false })?.isFile() ?? false;
+  } catch (e) {
+    return false;
+  }
 }
 
 function isTypescriptFile(url) {
