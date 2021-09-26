@@ -52,7 +52,9 @@ export function resolve(
   console.log("RESOLVE: START");
 
   // parentURL is the URL returned by previous resolve, so it is not the specifier that did the import but the resolved specifier
-  // If a .ts file was resolved for a import xxxx from ./foo.js file, then ./foo.ts file will be the parentURL, not foo.js
+  // If a ./foo.ts file was resolved for
+  // import xxxx from "./foo.js"
+  // Then ./foo.ts file will be the parentURL, not foo.js
   // This means abs/relative imports never need mapping of path from output to input
   let { parentURL, conditions } = context;
   console.log("RESOLVE: parentURL", parentURL);
@@ -114,9 +116,7 @@ function myModuleResolve(
 ): readonly [URL, string] | undefined {
   console.log("myModuleResolve: START");
 
-  // Order swapped from spec for minor perf gain.
-  // Ok since relative URLs cannot parse as URLs.
-  let resolved: URL | undefined;
+  // Resolve path specifiers
   if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
     console.log("myModuleResolve: resolveFilePath");
     const resolved = new URL(specifier, base);
@@ -140,10 +140,16 @@ function myModuleResolve(
     const tsFile = probeForTsFileInSamePathAsJsFile(resolved);
     if (tsFile !== undefined) {
       const tsFileUrl = pathToFileURL(tsFile);
-      return [tsFileUrl, "tsConfigAbsPath"];
+      // This file belongs to the same TsConfig as it's ParentUrl, but we don't know
+      // which TsConfig the ParentUrl belongs to....
+      // Or is it allowed in typescript composite project to make a relative import to a file in a different TsConfig?
+      return [tsFileUrl, "SameAsParent"];
     }
     return undefined;
   }
+
+  // Resolve bare specifiers
+  let resolved: URL | undefined;
   if (specifier[0] === "#") {
     console.log("myModuleResolve: packageImportsResolve");
     ({ resolved } = packageImportsResolve(
@@ -159,13 +165,16 @@ function myModuleResolve(
     } catch {
       console.log("myModuleResolve: packageResolve");
       resolved = packageResolve(specifier, base, conditions);
-      if (Array.isArray(resolved)) {
-        resolved = probeForLegacyIndex(resolved);
-      }
       console.log("myModuleResolve: packageResolve RETURN", resolved?.href);
     }
   }
   console.log("myModuleResolve: END", resolved?.href);
+
+  // At this point the bare specifier is resolved to one or more possible JS files
+
+  if (Array.isArray(resolved)) {
+    resolved = probeForLegacyIndex(resolved);
+  }
 
   // Check which tsconfig this file belongs to and translate the path....
   // for (const [outDir, tsconfig] of absoluteOutDirToTsConfigMap!.entries()) {
