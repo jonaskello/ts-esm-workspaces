@@ -1,7 +1,7 @@
 import { URL, pathToFileURL, fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
-import { Tsconfig, loadTsConfigAndResolveReferences } from "./tsconfig-loader";
+import { loadTsConfigAndResolveReferences, Tsconfig } from "./tsconfig-loader";
 const { statSync, Stats } = require("fs");
 
 const {
@@ -17,10 +17,38 @@ const {
 
 const { finalizeResolution, ERR_MODULE_NOT_FOUND } = require("./resolve_fs");
 
-let tsconfigMap: Map<string, Tsconfig> | undefined = undefined;
-let absoluteOutDirToTsConfigMap: Map<string, string> | undefined = undefined;
+type TsConfigInfo = {
+  tsconfigMap: Map<string, Tsconfig>;
+  absOutDirToTsConfig: Map<string, string>;
+};
 
-export function resolve(specifier, context, defaultResolve) {
+const entryTsConfigInfoCache: Map<string, TsConfigInfo> = new Map();
+
+type ResolveContext = {
+  conditions: string[];
+  parentURL: string | undefined;
+};
+
+type ResolveReturn = {
+  format?: null | undefined | string;
+  url: string;
+};
+
+/**
+ * specifier {string}
+ * context {Object}
+ *   conditions {string[]}
+ *   parentURL {string|undefined}
+ * defaultResolve {Function} The Node.js default resolver.
+ * Returns: {Object}
+ *   format {string|null|undefined} 'builtin' | 'commonjs' | 'json' | 'module' | 'wasm'
+ *   url {string} The absolute url to the import target (such as file://…)
+ */
+export function resolve(
+  specifier: string,
+  context: ResolveContext,
+  defaultResolve
+): ResolveReturn {
   console.log("RESOLVE: START");
 
   let { parentURL, conditions } = context;
@@ -32,21 +60,14 @@ export function resolve(specifier, context, defaultResolve) {
   }
 
   // Build tsconfig map if we don't have it
-  if (tsconfigMap === undefined) {
-    tsconfigMap = loadTsConfigAndResolveReferences();
-    absoluteOutDirToTsConfigMap = new Map();
-    for (const [k, v] of tsconfigMap.entries()) {
-      if (v.compilerOptions?.outDir === undefined) {
-        throw new Error("Outdir must be defined for now...");
-      }
-      const absoluteOutDir = path.resolve(
-        path.dirname(k),
-        v.compilerOptions.outDir
-      );
-      absoluteOutDirToTsConfigMap.set(absoluteOutDir, k);
-    }
-    console.log("tsconfigMap", tsconfigMap);
-    console.log("absoluteOutDirToTsConfigMap", absoluteOutDirToTsConfigMap);
+  const entryTsConfig = process.env["TS_NODE_PROJECT"];
+  if (!entryTsConfig) {
+    throw new Error("TS_NODE_PROJECT must be defined for now...");
+  }
+  let tsConfigInfo = entryTsConfigInfoCache.get(entryTsConfig);
+  if (tsConfigInfo === undefined) {
+    tsConfigInfo = buildTsConfigInfo(entryTsConfig);
+    entryTsConfigInfoCache.set(entryTsConfig, tsConfigInfo);
   }
 
   // If file ends in .ts then just return it
@@ -58,9 +79,37 @@ export function resolve(specifier, context, defaultResolve) {
   }
 
   conditions = getConditionsSet(conditions);
-  const url = myModuleResolve(specifier, parentURL, conditions);
+  const resolved = myModuleResolve(
+    specifier,
+    parentURL,
+    conditions,
+    tsConfigInfo
+  );
+  if (resolved !== undefined) {
+    const [url, format] = resolved;
+    return { url: `${url}`, format };
+  }
 
-  return { url: `${url}` };
+  return { url: defaultResolve(specifier, context, defaultResolve) };
+}
+
+function buildTsConfigInfo(entryTsConfig: string): TsConfigInfo {
+  const tsconfigMap = loadTsConfigAndResolveReferences(entryTsConfig);
+  const absOutDirToTsConfig = new Map();
+  for (const [k, v] of tsconfigMap.entries()) {
+    if (v.compilerOptions?.outDir === undefined) {
+      throw new Error("Outdir must be defined for now...");
+    }
+    const absoluteOutDir = path.resolve(
+      path.dirname(k),
+      v.compilerOptions.outDir
+    );
+    absOutDirToTsConfig.set(absoluteOutDir, k);
+  }
+  return {
+    tsconfigMap,
+    absOutDirToTsConfig,
+  };
 }
 
 /**
@@ -69,16 +118,33 @@ export function resolve(specifier, context, defaultResolve) {
  * @param {Set<string>} conditions
  * @returns {URL}
  */
-function myModuleResolve(specifier, base, conditions) {
+function myModuleResolve(
+  specifier,
+  base,
+  conditions,
+  tsConfigInfo: TsConfigInfo
+): readonly [URL, string] | undefined {
   console.log("myModuleResolve: START");
 
   // Order swapped from spec for minor perf gain.
   // Ok since relative URLs cannot parse as URLs.
-  let resolved;
+  let resolved: URL | undefined;
   if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
     console.log("myModuleResolve: resolveFilePath");
-    resolved = new URL(specifier, base);
-    // resolved = resolveFilePath(specifier, base);
+    const resolved = new URL(specifier, base);
+    const tsConfigAbsPath = getTsConfigAbsPathForOutFile(
+      tsConfigInfo,
+      resolved
+    );
+    if (tsConfigAbsPath) {
+      // If the file was in the output space of a tsconfig, then just
+      // probe for file-ext as there can be no path-mapping for abs/rel paths
+      const tsFile = probeForTsExtFile(resolved);
+      if (tsFile !== undefined) {
+        return [new URL(tsFile), tsConfigAbsPath];
+      }
+    }
+    return undefined;
   } else if (specifier[0] === "#") {
     console.log("myModuleResolve: packageImportsResolve");
     ({ resolved } = packageImportsResolve(
@@ -97,14 +163,14 @@ function myModuleResolve(specifier, base, conditions) {
       if (Array.isArray(resolved)) {
         resolved = probeForLegacyIndex(resolved);
       }
-      console.log("myModuleResolve: packageResolve RETURN", resolved.href);
+      console.log("myModuleResolve: packageResolve RETURN", resolved?.href);
     }
   }
-  console.log("myModuleResolve: END", resolved.href);
+  console.log("myModuleResolve: END", resolved?.href);
 
   // Check which tsconfig this file belongs to and translate the path....
-  for (const [outDir, tsconfig] of absoluteOutDirToTsConfigMap!.entries()) {
-  }
+  // for (const [outDir, tsconfig] of absoluteOutDirToTsConfigMap!.entries()) {
+  // }
 
   // Now we should have resolved to an URL with file-path (eg. foo.js),
   // It could also be to resolved to an extensionless file at this point...
@@ -119,7 +185,36 @@ function myModuleResolve(specifier, base, conditions) {
   resolved = translateJsUrlBackToTypescriptUrl(resolved);
 
   // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
-  return finalizeResolution(resolved, base);
+  const finalizedUrl = finalizeResolution(resolved, base);
+  return [finalizedUrl, "typescript"];
+}
+
+function getTsConfigAbsPathForOutFile(
+  tsConfigInfo: TsConfigInfo,
+  fileUrl: URL
+): string | undefined {
+  const filePath = fileURLToPath(fileUrl);
+  for (const key of tsConfigInfo.absOutDirToTsConfig.keys()) {
+    if (filePath.startsWith(key)) return key;
+  }
+  return undefined;
+}
+
+/**
+ * Given a file with a javascript extension, probe for a file with
+ * typescript extension in the exact same path.
+ */
+function probeForTsExtFile(jsFileUrl: URL): string | undefined {
+  // The jsFile can be extensionless or have another extension
+  // so we remove any extension and try with .ts and .tsx
+  const jsFilePath = fileURLToPath(jsFileUrl);
+  const extensionless = path.parse(jsFilePath).name;
+  if (fileExists(extensionless + ".ts")) {
+    return extensionless + ".ts";
+  }
+  if (fileExists(extensionless + ".tsx")) {
+    return extensionless + ".tsx";
+  }
 }
 
 /**

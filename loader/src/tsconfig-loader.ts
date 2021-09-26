@@ -168,12 +168,10 @@ export function loadTsconfig(
   return config;
 }
 
-export function loadTsConfigAndResolveReferences(): Map<string, Tsconfig> {
+export function loadTsConfigAndResolveReferences(
+  entryTsConfig: string
+): Map<string, Tsconfig> {
   let cwd = process.cwd();
-  const entryTsConfig = process.env["TS_NODE_PROJECT"];
-  if (!entryTsConfig) {
-    throw new Error("TS_NODE_PROJECT not set.");
-  }
   const tsconfigMap = new Map();
   loadTsConfigAndResolveReferencesRecursive(
     cwd,
