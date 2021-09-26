@@ -3,8 +3,19 @@ import { transformSync } from "esbuild";
 
 const isWindows = process.platform === "win32";
 
-export async function load(url, context, defaultLoad) {
-  console.log("LOAD: START");
+/**
+ *
+ * url {string}
+ * context {Object}
+ *   format {string|null|undefined} The format optionally supplied by the resolve hook.
+ * defaultLoad {Function}
+ * Returns: {Object}
+ *   format {string}
+ *   source {string|ArrayBuffer|TypedArray}
+ */
+
+export async function load(url: string, context, defaultLoad) {
+  console.log("LOAD: START", url, context);
 
   // Return transpiled source if typescript file
   if (isTypescriptFile(url)) {
