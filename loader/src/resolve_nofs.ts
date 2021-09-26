@@ -168,7 +168,7 @@ function emitLegacyIndexDeprecation(url, packageJSONUrl, base, main) {
  * @param {string[]} [conditions]
  * @returns {Set<string>}
  */
-function getConditionsSet(conditions) {
+function getConditionsSet(conditions): Set<string> {
   if (conditions !== undefined && conditions !== DEFAULT_CONDITIONS) {
     if (!ArrayIsArray(conditions)) {
       throw new ERR_INVALID_ARG_VALUE(

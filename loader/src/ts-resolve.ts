@@ -78,38 +78,22 @@ export function resolve(
     return { url };
   }
 
-  conditions = getConditionsSet(conditions);
+  // Try to resolve to a typescript file
+  const conditionsSet = getConditionsSet(conditions);
   const resolved = myModuleResolve(
     specifier,
     parentURL,
-    conditions,
+    conditionsSet,
     tsConfigInfo
   );
   if (resolved !== undefined) {
     const [url, format] = resolved;
+    console.log("it was resolved", url.href, format);
     return { url: `${url}`, format };
   }
 
-  return { url: defaultResolve(specifier, context, defaultResolve) };
-}
-
-function buildTsConfigInfo(entryTsConfig: string): TsConfigInfo {
-  const tsconfigMap = loadTsConfigAndResolveReferences(entryTsConfig);
-  const absOutDirToTsConfig = new Map();
-  for (const [k, v] of tsconfigMap.entries()) {
-    if (v.compilerOptions?.outDir === undefined) {
-      throw new Error("Outdir must be defined for now...");
-    }
-    const absoluteOutDir = path.resolve(
-      path.dirname(k),
-      v.compilerOptions.outDir
-    );
-    absOutDirToTsConfig.set(absoluteOutDir, k);
-  }
-  return {
-    tsconfigMap,
-    absOutDirToTsConfig,
-  };
+  // Not resolved as typescript, forward to default resolve
+  return defaultResolve(specifier, context, defaultResolve);
 }
 
 /**
@@ -119,9 +103,9 @@ function buildTsConfigInfo(entryTsConfig: string): TsConfigInfo {
  * @returns {URL}
  */
 function myModuleResolve(
-  specifier,
-  base,
-  conditions,
+  specifier: string,
+  base: string | undefined,
+  conditions: Set<string>,
   tsConfigInfo: TsConfigInfo
 ): readonly [URL, string] | undefined {
   console.log("myModuleResolve: START");
@@ -132,20 +116,31 @@ function myModuleResolve(
   if (shouldBeTreatedAsRelativeOrAbsolutePath(specifier)) {
     console.log("myModuleResolve: resolveFilePath");
     const resolved = new URL(specifier, base);
-    const tsConfigAbsPath = getTsConfigAbsPathForOutFile(
-      tsConfigInfo,
-      resolved
-    );
-    if (tsConfigAbsPath) {
-      // If the file was in the output space of a tsconfig, then just
-      // probe for file-ext as there can be no path-mapping for abs/rel paths
-      const tsFile = probeForTsExtFile(resolved);
-      if (tsFile !== undefined) {
-        return [new URL(tsFile), tsConfigAbsPath];
-      }
+    // console.log("myModuleResolve: tsConfigInfo", tsConfigInfo);
+    // const tsConfigAbsPath = getTsConfigAbsPathForOutFile(
+    //   tsConfigInfo,
+    //   resolved
+    // );
+    // console.log("myModuleResolve: tsConfigAbsPath", tsConfigAbsPath);
+    // if (tsConfigAbsPath) {
+    //   // If the file was in the output space of a tsconfig, then just
+    //   // probe for file-ext as there can be no path-mapping for abs/rel paths
+    //   const tsFile = probeForTsExtFile(resolved);
+    //   console.log("myModuleResolve: tsFile", tsFile);
+    //   if (tsFile !== undefined) {
+    //     return [new URL(tsFile), tsConfigAbsPath];
+    //   }
+    // }
+    console.log("myModuleResolve: resolved", resolved.href);
+
+    const tsFile = probeForTsFileInSamePathAsJsFile(resolved);
+    if (tsFile !== undefined) {
+      const tsFileUrl = pathToFileURL(tsFile);
+      return [tsFileUrl, "tsConfigAbsPath"];
     }
     return undefined;
-  } else if (specifier[0] === "#") {
+  }
+  if (specifier[0] === "#") {
     console.log("myModuleResolve: packageImportsResolve");
     ({ resolved } = packageImportsResolve(
       packageResolve,
@@ -204,11 +199,12 @@ function getTsConfigAbsPathForOutFile(
  * Given a file with a javascript extension, probe for a file with
  * typescript extension in the exact same path.
  */
-function probeForTsExtFile(jsFileUrl: URL): string | undefined {
+function probeForTsFileInSamePathAsJsFile(jsFileUrl: URL): string | undefined {
   // The jsFile can be extensionless or have another extension
   // so we remove any extension and try with .ts and .tsx
   const jsFilePath = fileURLToPath(jsFileUrl);
-  const extensionless = path.parse(jsFilePath).name;
+  const parsedPath = path.parse(jsFilePath);
+  const extensionless = path.join(parsedPath.dir, parsedPath.name);
   if (fileExists(extensionless + ".ts")) {
     return extensionless + ".ts";
   }
@@ -242,7 +238,11 @@ function translateJsUrlBackToTypescriptUrl(url) {
  * @param {Set<string>} conditions
  * @returns {URL}
  */
-function packageResolve(specifier, base, conditions) {
+function packageResolve(
+  specifier: string,
+  base: string | URL | undefined,
+  conditions: Set<string>
+) {
   // Parse the specifier as a package name (package or @org/package) and separate out the sub-path
   const { packageName, packageSubpath, isScoped } = parsePackageName(
     specifier,
@@ -283,7 +283,7 @@ function packageResolve(specifier, base, conditions) {
 
   // eslint can't handle the above code.
   // eslint-disable-next-line no-unreachable
-  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base));
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base ?? ""));
 }
 
 // This could probably be moved to a built-in API
@@ -495,4 +495,23 @@ function fileExists(url) {
 function isTypescriptFile(url) {
   const extensionsRegex = /\.ts$/;
   return extensionsRegex.test(url);
+}
+
+function buildTsConfigInfo(entryTsConfig: string): TsConfigInfo {
+  const tsconfigMap = loadTsConfigAndResolveReferences(entryTsConfig);
+  const absOutDirToTsConfig = new Map();
+  for (const [k, v] of tsconfigMap.entries()) {
+    if (v.compilerOptions?.outDir === undefined) {
+      throw new Error("Outdir must be defined for now...");
+    }
+    const absoluteOutDir = path.resolve(
+      path.dirname(k),
+      v.compilerOptions.outDir
+    );
+    absOutDirToTsConfig.set(absoluteOutDir, k);
+  }
+  return {
+    tsconfigMap,
+    absOutDirToTsConfig,
+  };
 }
