@@ -240,6 +240,10 @@ const encodedSepRegEx = /%2F|%2C/i;
  * @returns {URL | undefined}
  */
 function finalizeResolution(resolved, base) {
+  console.log(
+    "finalizeResolutionfinalizeResolutionfinalizeResolution-->",
+    typeof resolved
+  );
   if (RegExpPrototypeTest(encodedSepRegEx, resolved.pathname))
     throw new ERR_INVALID_MODULE_SPECIFIER(
       resolved.pathname,

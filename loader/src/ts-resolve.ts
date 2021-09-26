@@ -194,8 +194,13 @@ function myModuleResolve(
   // Do we want to support extensionless files? In that case we need to check if it is
   // a directory or file... Typescript always outputs .js files so we could just add that?
 
-  resolved = translateJsUrlBackToTypescriptUrl(resolved);
-  // resolved = probeForTsFileInSamePathAsJsFile(resolved);
+  // const resolved2 = translateJsUrlBackToTypescriptUrl(resolved);
+  // console.log("bare specifier resolved2", resolved2);
+  resolved = probeForTsFileInSamePathAsJsFile(resolved);
+  if (resolved === undefined) {
+    return undefined;
+  }
+  console.log("bare specifier resolved", resolved);
 
   // finalizeResolution checks for old file endings if getOptionValue("--experimental-specifier-resolution") === "node"
   const finalizedUrl = finalizeResolution(resolved, base);
