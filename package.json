@@ -36,6 +36,6 @@
     "build-prod": "node scripts/build-prod.js",
     "serve-prod": "node --experimental-specifier-resolution=node prod/packages/server/lib/server.js",
     "build-loader": "tsc -p loader",
-    "try": "yarn build-loader && yarn dev-server"
+    "try": "yarn build-loader && TS_NODE_PROJECT=./packages/server/tsconfig.json node --loader ./loader/lib/myloader.js --experimental-specifier-resolution=node --enable-source-maps ./packages/server/src/server.ts"
   }
 }
