@@ -137,9 +137,8 @@ function myModuleResolve(
     // }
     console.log("myModuleResolve: resolved", resolved.href);
 
-    const tsFile = probeForTsFileInSamePathAsJsFile(resolved);
-    if (tsFile !== undefined) {
-      const tsFileUrl = pathToFileURL(tsFile);
+    const tsFileUrl = probeForTsFileInSamePathAsJsFile(resolved);
+    if (tsFileUrl !== undefined) {
       // This file belongs to the same TsConfig as it's ParentUrl, but we don't know
       // which TsConfig the ParentUrl belongs to....
       // Or is it allowed in typescript composite project to make a relative import to a file in a different TsConfig?
@@ -212,17 +211,17 @@ function getTsConfigAbsPathForOutFile(
  * Given a file with a javascript extension, probe for a file with
  * typescript extension in the exact same path.
  */
-function probeForTsFileInSamePathAsJsFile(jsFileUrl: URL): string | undefined {
+function probeForTsFileInSamePathAsJsFile(jsFileUrl: URL): URL | undefined {
   // The jsFile can be extensionless or have another extension
   // so we remove any extension and try with .ts and .tsx
   const jsFilePath = fileURLToPath(jsFileUrl);
   const parsedPath = path.parse(jsFilePath);
   const extensionless = path.join(parsedPath.dir, parsedPath.name);
   if (fileExists(extensionless + ".ts")) {
-    return extensionless + ".ts";
+    return pathToFileURL(extensionless + ".ts");
   }
   if (fileExists(extensionless + ".tsx")) {
-    return extensionless + ".tsx";
+    return pathToFileURL(extensionless + ".tsx");
   }
 }
 
